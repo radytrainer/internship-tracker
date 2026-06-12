@@ -117,7 +117,7 @@ export function BoardPage({ companies }: BoardPageProps) {
                       <h3 className="font-semibold text-gray-900 truncate">{company.company_name}</h3>
                     </div>
                     {company.industry && (
-                      <Badge variant="outline" className="text-xs mt-0.5">{company.industry}</Badge>
+                      <a href={company.industry} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline mt-0.5">Telegram</a>
                     )}
                   </div>
                   <div className="text-right shrink-0">
@@ -193,7 +193,9 @@ export function BoardPage({ companies }: BoardPageProps) {
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                      {selected.industry && <Badge variant="secondary">{selected.industry}</Badge>}
+                      {selected.industry && (
+                        <a href={selected.industry} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline">Telegram</a>
+                      )}
                       <span className={`font-semibold ${selected.isFull ? 'text-red-600' : 'text-blue-600'}`}>
                         {selected.total_applications} applications
                       </span>

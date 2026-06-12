@@ -111,6 +111,7 @@ export function InternshipTable({ internships, students, companies, role }: Inte
               <TableHead>Company / Position</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Allowance</TableHead>
+              <TableHead>Tutor</TableHead>
               <TableHead>Agreement</TableHead>
               <TableHead>Status</TableHead>
               {canManage && <TableHead className="text-right">Actions</TableHead>}
@@ -118,7 +119,7 @@ export function InternshipTable({ internships, students, companies, role }: Inte
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={canManage ? 7 : 6} className="text-center text-muted-foreground py-10">No internship records found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center text-muted-foreground py-10">No internship records found</TableCell></TableRow>
             ) : (
               filtered.map((iv: AnyRecord) => {
                 const student = students.find(s => s.id === iv.student_id)
@@ -146,6 +147,7 @@ export function InternshipTable({ internships, students, companies, role }: Inte
                     <TableCell className="font-mono text-sm">
                       {iv.allowance != null ? `${formatCurrency(iv.allowance)}/mo` : '—'}
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{iv.tutor ?? '—'}</TableCell>
                     <TableCell>
                       {iv.agreement_signed
                         ? <CheckCircle className="h-4 w-4 text-green-500" />

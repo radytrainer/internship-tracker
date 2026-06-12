@@ -17,6 +17,7 @@ const internshipSchema = z.object({
   supervisor: z.string().optional().nullable(),
   supervisor_phone: z.string().optional().nullable(),
   supervisor_email: z.string().email().optional().nullable().or(z.literal('')),
+  tutor: z.string().optional().nullable(),
   internship_status: z.enum(['Active', 'Completed', 'Terminated']).default('Active'),
   notes: z.string().optional().nullable(),
 })

@@ -26,6 +26,7 @@ const schema = z.object({
   supervisor: z.string().optional().nullable(),
   supervisor_phone: z.string().optional().nullable(),
   supervisor_email: z.string().email().optional().nullable().or(z.literal('')),
+  tutor: z.string().optional().nullable(),
   internship_status: z.enum(['Active', 'Completed', 'Terminated']).default('Active'),
   notes: z.string().optional().nullable(),
 })
@@ -47,7 +48,7 @@ export function InternshipForm({ open, onClose, internship, students, companies 
       student_id: '', company_id: '', position: '',
       allowance: undefined, start_date: '', end_date: '',
       agreement_signed: false, supervisor: '', supervisor_phone: '',
-      supervisor_email: '', internship_status: 'Active', notes: '',
+      supervisor_email: '', tutor: '', internship_status: 'Active', notes: '',
     },
   })
 
@@ -64,6 +65,7 @@ export function InternshipForm({ open, onClose, internship, students, companies 
         supervisor: internship.supervisor ?? '',
         supervisor_phone: internship.supervisor_phone ?? '',
         supervisor_email: internship.supervisor_email ?? '',
+        tutor: internship.tutor ?? '',
         internship_status: internship.internship_status,
         notes: internship.notes ?? '',
       })
@@ -72,7 +74,7 @@ export function InternshipForm({ open, onClose, internship, students, companies 
         student_id: '', company_id: '', position: '',
         allowance: undefined, start_date: '', end_date: '',
         agreement_signed: false, supervisor: '', supervisor_phone: '',
-        supervisor_email: '', internship_status: 'Active', notes: '',
+        supervisor_email: '', tutor: '', internship_status: 'Active', notes: '',
       })
     }
   }, [internship, open, form])
@@ -185,6 +187,13 @@ export function InternshipForm({ open, onClose, internship, students, companies 
               <FormItem>
                 <FormLabel>Supervisor Email</FormLabel>
                 <FormControl><Input type="email" placeholder="supervisor@company.com" {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="tutor" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tutor</FormLabel>
+                <FormControl><Input placeholder="Tutor name..." {...field} value={field.value ?? ''} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />

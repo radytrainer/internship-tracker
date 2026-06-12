@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Search, Pencil, Trash2, ExternalLink, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, ExternalLink, MoreHorizontal, Send } from 'lucide-react'
 import { CompanyForm } from './company-form'
 import { deleteCompany } from '@/app/actions/companies'
 import { toast } from 'sonner'
@@ -77,7 +77,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Company</TableHead>
-              <TableHead>Industry</TableHead>
+              <TableHead>Telegram</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Max Students</TableHead>
               <TableHead>Positions</TableHead>
@@ -116,7 +116,11 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{c.industry ? <Badge variant="secondary">{c.industry}</Badge> : '—'}</TableCell>
+                    <TableCell>
+                      {c.industry
+                        ? <a href={c.industry} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-500 hover:underline text-sm"><Send className="h-3 w-3" />Telegram</a>
+                        : '—'}
+                    </TableCell>
                     <TableCell>
                       <div className="text-sm">
                         {c.contact_person && <p className="font-medium">{c.contact_person}</p>}

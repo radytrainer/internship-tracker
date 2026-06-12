@@ -102,8 +102,8 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
 
               <FormField control={form.control} name="industry" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Industry</FormLabel>
-                  <FormControl><Input placeholder="Technology, Finance…" {...field} value={field.value ?? ''} /></FormControl>
+                  <FormLabel>Telegram Link</FormLabel>
+                  <FormControl><Input placeholder="https://t.me/channelname" {...field} value={field.value ?? ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdmin } from '@/lib/auth/server'
+import { requireAdmin, getCurrentProfile } from '@/lib/auth/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -19,11 +19,24 @@ const interviewSchema = z.object({
 export type InterviewFormData = z.infer<typeof interviewSchema>
 
 export async function createInterview(data: InterviewFormData) {
-  const auth = await requireAdmin()
-  if ('error' in auth) return auth
+  const { role, profile } = await getCurrentProfile()
+  if (!role || role === 'trainer') return { success: false, error: 'Permission denied.' }
+
   const supabase = createAdminClient()
   const parsed = interviewSchema.safeParse(data)
   if (!parsed.success) return { success: false, error: 'Invalid data' }
+
+  if (role === 'student') {
+    const { data: app } = await supabase
+      .from('internship_applications')
+      .select('student_id')
+      .eq('id', parsed.data.application_id)
+      .single()
+    if (!app || !profile?.student_id || app.student_id !== profile.student_id) {
+      return { success: false, error: 'You can only schedule interviews for your own applications.' }
+    }
+    parsed.data.result = 'Pending'
+  }
 
   const { error } = await supabase.from('interviews').insert(parsed.data)
   if (error) return { success: false, error: error.message }

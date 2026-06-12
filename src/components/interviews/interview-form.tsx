@@ -14,6 +14,7 @@ import { Loader2 } from 'lucide-react'
 import { createInterview, updateInterview } from '@/app/actions/interviews'
 import { toast } from 'sonner'
 import type { Interview } from '@/types/database.types'
+import type { AppRole } from '@/lib/roles'
 
 const schema = z.object({
   application_id: z.string().uuid('Select an application'),
@@ -33,10 +34,11 @@ type ApplicationOption = any
 
 interface InterviewFormProps {
   open: boolean; onClose: () => void; interview: Interview | null
-  applications: ApplicationOption[]
+  applications: ApplicationOption[]; role?: AppRole
 }
 
-export function InterviewForm({ open, onClose, interview, applications }: InterviewFormProps) {
+export function InterviewForm({ open, onClose, interview, applications, role }: InterviewFormProps) {
+  const isStudent = role === 'student'
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -112,7 +114,7 @@ export function InterviewForm({ open, onClose, interview, applications }: Interv
                 </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${isStudent ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <FormField control={form.control} name="interview_type" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type *</FormLabel>
@@ -125,18 +127,20 @@ export function InterviewForm({ open, onClose, interview, applications }: Interv
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="result" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Result *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {['Pending', 'Passed', 'Failed'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              {!isStudent && (
+                <FormField control={form.control} name="result" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Result *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {['Pending', 'Passed', 'Failed'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
             </div>
             <FormField control={form.control} name="location" render={({ field }) => (
               <FormItem>
@@ -152,13 +156,15 @@ export function InterviewForm({ open, onClose, interview, applications }: Interv
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="feedback" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Feedback / Notes</FormLabel>
-                <FormControl><Textarea placeholder="Interview feedback..." {...field} value={field.value ?? ''} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            {!isStudent && (
+              <FormField control={form.control} name="feedback" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Feedback / Notes</FormLabel>
+                  <FormControl><Textarea placeholder="Interview feedback..." {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>

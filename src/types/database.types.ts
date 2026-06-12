@@ -151,6 +151,7 @@ export interface Internship {
   supervisor: string | null
   supervisor_phone: string | null
   supervisor_email: string | null
+  tutor: string | null
   internship_status: InternshipStatus
   notes: string | null
   created_at: string

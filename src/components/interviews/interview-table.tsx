@@ -48,6 +48,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
   const [deleting, setDeleting] = useState(false)
 
   const canManage = role === 'admin'
+  const canSchedule = role === 'admin' || role === 'student'
 
   const filtered = useMemo(() => interviews.filter((iv: AnyRecord) => {
     const q = search.toLowerCase()
@@ -80,7 +81,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
           <h2 className="text-xl font-bold">{role === 'student' ? 'My Interviews' : 'Interviews'}</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} interviews</p>
         </div>
-        {canManage && (
+        {canSchedule && (
           <Button size="sm" onClick={() => { setEditInterview(null); setFormOpen(true) }}>
             <Plus className="mr-2 h-4 w-4" />Schedule Interview
           </Button>
@@ -209,12 +210,13 @@ export function InterviewTable({ interviews, applications, companies, role }: In
         </AlertDialogContent>
       </AlertDialog>
 
-      {canManage && (
+      {canSchedule && (
         <InterviewForm
           open={formOpen}
           onClose={() => { setFormOpen(false); setEditInterview(null); router.refresh() }}
           interview={editInterview}
           applications={applications}
+          role={role}
         />
       )}
     </div>
