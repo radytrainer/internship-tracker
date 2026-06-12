@@ -82,6 +82,7 @@ export interface Company {
   contact_phone: string | null
   website: string | null
   max_students_per_company: number
+  is_visible: boolean
   notes: string | null
   created_at: string
   updated_at: string

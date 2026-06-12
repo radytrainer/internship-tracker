@@ -23,7 +23,8 @@ const schema = z.object({
   contact_email: z.string().email().optional().nullable().or(z.literal('')),
   contact_phone: z.string().optional().nullable(),
   website: z.string().url().optional().nullable().or(z.literal('')),
-  max_students_per_company: z.coerce.number().int().min(1).default(10),
+  max_students_per_company: z.coerce.number().int().min(0).default(10),
+  is_visible: z.boolean().default(true),
   notes: z.string().optional().nullable(),
   logo_url: z.string().url().optional().nullable().or(z.literal('')),
 })
@@ -33,7 +34,7 @@ type FormValues = z.infer<typeof schema>
 const EMPTY: FormValues = {
   company_name: '', industry: '', address: '', contact_person: '',
   contact_email: '', contact_phone: '', website: '',
-  max_students_per_company: 10, notes: '', logo_url: '',
+  max_students_per_company: 10, is_visible: true, notes: '', logo_url: '',
 }
 
 export function CompanyForm({ open, onClose, company }: { open: boolean; onClose: () => void; company: (Company & { logo_url?: string | null }) | null }) {
@@ -50,6 +51,7 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
         contact_phone: company.contact_phone ?? '',
         website: company.website ?? '',
         max_students_per_company: company.max_students_per_company,
+        is_visible: company.is_visible ?? true,
         notes: company.notes ?? '',
         logo_url: company.logo_url ?? '',
       })
@@ -151,8 +153,20 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
               <FormField control={form.control} name="max_students_per_company" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Max Students</FormLabel>
-                  <FormControl><Input type="number" min={1} {...field} /></FormControl>
+                  <FormControl><Input type="number" min={0} {...field} /></FormControl>
                   <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="is_visible" render={({ field }) => (
+                <FormItem className="flex items-center gap-3 col-span-2 rounded-lg border p-3 bg-muted/30">
+                  <FormControl>
+                    <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                  </FormControl>
+                  <div>
+                    <FormLabel className="!mt-0">Visible to students</FormLabel>
+                    <p className="text-xs text-muted-foreground">When unchecked, students cannot see this company</p>
+                  </div>
                 </FormItem>
               )} />
 

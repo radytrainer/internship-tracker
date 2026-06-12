@@ -13,7 +13,8 @@ const companySchema = z.object({
   contact_email: z.string().email().optional().nullable().or(z.literal('')),
   contact_phone: z.string().optional().nullable(),
   website: z.string().url().optional().nullable().or(z.literal('')),
-  max_students_per_company: z.number().int().min(1).default(10),
+  max_students_per_company: z.number().int().min(0).default(10),
+  is_visible: z.boolean().default(true),
   notes: z.string().optional().nullable(),
   logo_url: z.string().url().optional().nullable().or(z.literal('')),
 })
@@ -109,5 +110,15 @@ export async function deletePosition(id: string) {
   const { error } = await supabase.from('company_positions').delete().eq('id', id)
   if (error) return { success: false, error: error.message }
   revalidatePath('/positions')
+  return { success: true, error: null }
+}
+
+export async function toggleCompanyVisibility(id: string, is_visible: boolean) {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('companies').update({ is_visible }).eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/companies')
   return { success: true, error: null }
 }

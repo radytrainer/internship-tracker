@@ -8,9 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Search, Pencil, Trash2, ExternalLink, MoreHorizontal, Send } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, ExternalLink, MoreHorizontal, Send, Eye, EyeOff } from 'lucide-react'
 import { CompanyForm } from './company-form'
-import { deleteCompany } from '@/app/actions/companies'
+import { deleteCompany, toggleCompanyVisibility } from '@/app/actions/companies'
 import { toast } from 'sonner'
 import type { AppRole } from '@/lib/roles'
 import type { Company } from '@/types/database.types'
@@ -55,6 +55,12 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
     else { toast.success('Company deleted'); router.refresh() }
   }
 
+  const handleToggleVisibility = async (id: string, current: boolean) => {
+    const result = await toggleCompanyVisibility(id, !current)
+    if (result.error) toast.error(result.error)
+    else { toast.success(!current ? 'Company visible to students' : 'Company hidden from students'); router.refresh() }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -93,8 +99,9 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                 const c = company as AnyRecord
                 const posCount = c.company_positions?.[0]?.count ?? 0
                 const appCount = c.internship_applications?.[0]?.count ?? 0
+                const isHidden = c.is_visible === false
                 return (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className={isHidden ? 'opacity-50' : ''}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {c.logo_url ? (
@@ -107,7 +114,10 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                           </div>
                         )}
                         <div>
-                          <p className="font-medium">{c.company_name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium">{c.company_name}</p>
+                            {isHidden && <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                          </div>
                           {c.website && (
                             <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
                               <ExternalLink className="h-3 w-3" />Website
@@ -142,6 +152,12 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => { setEditCompany(c); setFormOpen(true) }}>
                               <Pencil className="mr-2 h-4 w-4" />Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleVisibility(c.id, c.is_visible !== false)}>
+                              {c.is_visible === false
+                                ? <><Eye className="mr-2 h-4 w-4" />Show to students</>
+                                : <><EyeOff className="mr-2 h-4 w-4" />Hide from students</>
+                              }
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
