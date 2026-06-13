@@ -46,7 +46,7 @@ export async function middleware(request: NextRequest) {
   // Authenticated — fetch profile once, use for all checks
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   const role = profile?.role
-  const defaultPath = role === 'student' ? '/applications' : '/dashboard'
+  const defaultPath = '/dashboard'
 
   if (pathname === '/' || pathname === '/login') {
     const url = request.nextUrl.clone()
