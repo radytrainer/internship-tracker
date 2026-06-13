@@ -19,6 +19,7 @@ import type { CompanyPosition } from '@/types/database.types'
 const schema = z.object({
   company_id: z.string().uuid('Select a company'),
   position_name: z.string().min(1, 'Required'),
+  position_type: z.enum(['Internship', 'Full-Time Job']).default('Internship'),
   max_students: z.coerce.number().int().min(1).default(5),
   intake_date: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
@@ -32,14 +33,22 @@ export function PositionForm({ open, onClose, position, companies }: {
 }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { company_id: '', position_name: '', max_students: 5, intake_date: '', description: '', is_active: true },
+    defaultValues: { company_id: '', position_name: '', position_type: 'Internship', max_students: 5, intake_date: '', description: '', is_active: true },
   })
 
   useEffect(() => {
     if (position) {
-      form.reset({ company_id: position.company_id, position_name: position.position_name, max_students: position.max_students, intake_date: position.intake_date ?? '', description: position.description ?? '', is_active: position.is_active })
+      form.reset({
+        company_id: position.company_id,
+        position_name: position.position_name,
+        position_type: (position.position_type as 'Internship' | 'Full-Time Job') ?? 'Internship',
+        max_students: position.max_students,
+        intake_date: position.intake_date ?? '',
+        description: position.description ?? '',
+        is_active: position.is_active,
+      })
     } else {
-      form.reset({ company_id: '', position_name: '', max_students: 5, intake_date: '', description: '', is_active: true })
+      form.reset({ company_id: '', position_name: '', position_type: 'Internship', max_students: 5, intake_date: '', description: '', is_active: true })
     }
   }, [position, open, form])
 
@@ -67,13 +76,28 @@ export function PositionForm({ open, onClose, position, companies }: {
                 <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="position_name" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Position Name *</FormLabel>
-                <FormControl><Input placeholder="Frontend Developer Intern" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="position_name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Position Name *</FormLabel>
+                  <FormControl><Input placeholder="Frontend Developer Intern" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="position_type" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="Internship">Internship</SelectItem>
+                      <SelectItem value="Full-Time Job">Full-Time Job</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="max_students" render={({ field }) => (
                 <FormItem>

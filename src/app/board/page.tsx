@@ -93,11 +93,10 @@ export default async function PublicBoardPage() {
     .sort((a, b) => b.total_applications - a.total_applications)
     .slice(0, 10)
 
-  // Tab 2: top 10 by most remaining slots (still has open capacity)
+  // Tab 2: all companies with remaining slots, sorted by most remaining (client slices to 10)
   const availableCompanies = [...allCompanies]
     .filter(c => c.total_remaining > 0)
     .sort((a, b) => b.total_remaining - a.total_remaining)
-    .slice(0, 10)
 
   return <BoardPage topCompanies={topCompanies} availableCompanies={availableCompanies} />
 }

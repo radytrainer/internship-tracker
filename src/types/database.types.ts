@@ -93,10 +93,13 @@ export interface Company {
   _application_count?: number
 }
 
+export type PositionType = 'Internship' | 'Full-Time Job'
+
 export interface CompanyPosition {
   id: string
   company_id: string
   position_name: string
+  position_type: PositionType
   max_students: number
   intake_date: string | null
   description: string | null

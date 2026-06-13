@@ -184,6 +184,9 @@ function CompanyGrid({ companies, mode, onSelect }: {
 
 export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) {
   const [selected, setSelected] = useState<AnyRecord | null>(null)
+  const [showAllAvailable, setShowAllAvailable] = useState(false)
+
+  const visibleAvailable = showAllAvailable ? availableCompanies : availableCompanies.slice(0, 10)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -231,8 +234,25 @@ export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) 
           </TabsContent>
 
           <TabsContent value="available">
-            <p className="text-sm text-muted-foreground mb-4">Top 10 companies with the most open slots still available</p>
-            <CompanyGrid companies={availableCompanies} mode="available" onSelect={setSelected} />
+            <p className="text-sm text-muted-foreground mb-4">
+              {showAllAvailable
+                ? `All ${availableCompanies.length} companies with open slots`
+                : `Top 10 of ${availableCompanies.length} companies with open slots`}
+            </p>
+            <CompanyGrid companies={visibleAvailable} mode="available" onSelect={setSelected} />
+            {availableCompanies.length > 10 && (
+              <div className="flex justify-center mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAllAvailable(v => !v)}
+                  className="gap-2"
+                >
+                  {showAllAvailable
+                    ? 'Show Top 10 Only'
+                    : `View All ${availableCompanies.length} Companies`}
+                </Button>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </main>

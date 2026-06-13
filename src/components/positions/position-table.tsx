@@ -90,6 +90,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
           <TableHeader>
             <TableRow>
               <TableHead>Position</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Intake</TableHead>
               <TableHead>Slots</TableHead>
@@ -100,13 +101,23 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={canManage ? 7 : 6} className="text-center text-muted-foreground py-10">No positions found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={canManage ? 8 : 7} className="text-center text-muted-foreground py-10">No positions found</TableCell></TableRow>
             ) : (
               filtered.map(pos => {
                 const p = pos as AnyRecord
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.position_name}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={p.position_type === 'Full-Time Job'
+                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-100'
+                          : 'bg-blue-100 text-blue-700 hover:bg-blue-100'}
+                      >
+                        {p.position_type ?? 'Internship'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{p.company?.company_name ?? '—'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                       {fmtIntake(p.intake_date) ?? '—'}

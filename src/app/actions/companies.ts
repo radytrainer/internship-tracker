@@ -24,6 +24,7 @@ const companySchema = z.object({
 const positionSchema = z.object({
   company_id: z.string().uuid(),
   position_name: z.string().min(1),
+  position_type: z.enum(['Internship', 'Full-Time Job']).default('Internship'),
   max_students: z.number().int().min(1).default(5),
   intake_date: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
