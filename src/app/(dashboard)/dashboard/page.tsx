@@ -9,7 +9,7 @@ import { AllowanceSalaryChart } from '@/components/dashboard/allowance-salary-ch
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate, STUDENT_STATUS_COLORS, APPLICATION_STATUS_COLORS } from '@/lib/utils'
-import { AlertTriangle, ArrowUpRight, Briefcase, Building2, CalendarDays, Clock, UserRound } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, Briefcase, Building2, CalendarDays, Clock, FileText, MessageSquare, UserRound } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -23,117 +23,194 @@ export default async function DashboardPage() {
       supabase.from('students').select('id, first_name, last_name, student_code, status, class:classes(name), generation:generations(name)').eq('id', studentId ?? '').single(),
       supabase
         .from('internship_applications')
-        .select('id, application_date, application_status, company:companies(company_name), position:company_positions(position_name)')
+        .select('id, company_id, application_date, application_status, company:companies(company_name), position:company_positions(position_name, position_type)')
+        .eq('student_id', studentId ?? '')
         .order('application_date', { ascending: false }),
       supabase
         .from('interviews')
         .select('id, interview_date, interview_time, interview_type, result, application:internship_applications(company:companies(company_name), position:company_positions(position_name))')
-        .order('interview_date', { ascending: true }),
+        .order('interview_date', { ascending: false }),
       supabase
         .from('internships')
         .select('id, position, start_date, end_date, internship_status, allowance, company:companies(company_name)')
+        .eq('student_id', studentId ?? '')
         .order('start_date', { ascending: false }),
       supabase
         .from('employment_records')
         .select('id, company_name, position, employment_status, start_date, salary')
+        .eq('student_id', studentId ?? '')
         .order('start_date', { ascending: false }),
     ])
 
-    const nextInterview = (interviews ?? []).find(item => item.result === 'Pending')
+    const apps = applications ?? []
+    const ivs  = interviews ?? []
+
+    // Derived stats
+    const uniqueCompanies  = new Set(apps.map(a => a.company_id)).size
+    const internshipApps   = apps.filter(a => one(a.position as { position_type: string }[] | null)?.position_type === 'Internship').length
+    const fullTimeApps     = apps.filter(a => one(a.position as { position_type: string }[] | null)?.position_type === 'Full-Time Job').length
+    const ivPassed         = ivs.filter(i => i.result === 'Passed').length
+    const ivFailed         = ivs.filter(i => i.result === 'Failed').length
+    const ivPending        = ivs.filter(i => i.result === 'Pending').length
+    const accepted         = apps.filter(a => a.application_status === 'Accepted').length
+    const rejected         = apps.filter(a => a.application_status === 'Rejected').length
+    const nextInterview    = ivs.find(i => i.result === 'Pending')
+
+    const statusOrder = ['Applied', 'Under Review', 'Interview Scheduled', 'Interview Passed', 'Interview Failed', 'Accepted', 'Rejected']
+    const statusCounts = statusOrder.map(s => ({ status: s, count: apps.filter(a => a.application_status === s).length }))
+
+    const statusColors: Record<string, string> = {
+      'Applied':             'bg-blue-400',
+      'Under Review':        'bg-yellow-400',
+      'Interview Scheduled': 'bg-purple-400',
+      'Interview Passed':    'bg-emerald-400',
+      'Interview Failed':    'bg-red-400',
+      'Accepted':            'bg-green-500',
+      'Rejected':            'bg-gray-400',
+    }
 
     return (
       <div className="space-y-6">
-        <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <Card className="overflow-hidden border-blue-200 bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-            <CardHeader className="pb-3">
-              <CardDescription>Student workspace</CardDescription>
-              <CardTitle className="text-2xl">
-                {student?.first_name} {student?.last_name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-muted-foreground">Student code</p>
-                <p className="font-semibold">{student?.student_code ?? 'Not linked yet'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Current status</p>
+        {/* Welcome banner */}
+        <Card className="overflow-hidden border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/20">
+          <CardContent className="p-5 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm text-muted-foreground">Welcome back</p>
+              <p className="text-2xl font-bold">{student?.first_name} {student?.last_name}</p>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="font-mono text-xs text-muted-foreground">{student?.student_code}</span>
                 <Badge className={STUDENT_STATUS_COLORS[student?.status ?? 'Studying'] ?? 'bg-muted text-muted-foreground'}>
                   {student?.status ?? 'Studying'}
                 </Badge>
+                {one(student?.generation) && <Badge variant="secondary">{one(student?.generation)?.name}</Badge>}
+                {one(student?.class) && <Badge variant="secondary">{one(student?.class)?.name}</Badge>}
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Generation</p>
-                <p className="font-medium">{one(student?.generation)?.name ?? 'Not assigned'}</p>
+            </div>
+            {nextInterview && (
+              <div className="rounded-xl border border-purple-200 bg-purple-50 dark:bg-purple-950/30 px-4 py-3 text-sm shrink-0">
+                <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">Next Interview</p>
+                <p className="font-semibold text-purple-900 dark:text-purple-200 mt-0.5">
+                  {one(one(nextInterview.application)?.company)?.company_name ?? '—'}
+                </p>
+                <p className="text-xs text-purple-700 dark:text-purple-300">
+                  {formatDate(nextInterview.interview_date)}
+                  {nextInterview.interview_time ? ` at ${nextInterview.interview_time}` : ''}
+                  {nextInterview.interview_type ? ` · ${nextInterview.interview_type}` : ''}
+                </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Class</p>
-                <p className="font-medium">{one(student?.class)?.name ?? 'Not assigned'}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stat grid row 1 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatBox label="Total Applications" value={apps.length}      color="text-blue-600"   bg="bg-blue-50 dark:bg-blue-950/30"   icon={FileText} />
+          <StatBox label="Companies Applied"  value={uniqueCompanies}  color="text-indigo-600" bg="bg-indigo-50 dark:bg-indigo-950/30" icon={Building2} />
+          <StatBox label="Interviews"         value={ivs.length}       color="text-purple-600" bg="bg-purple-50 dark:bg-purple-950/30" icon={MessageSquare} />
+          <StatBox label="Accepted"           value={accepted}         color="text-green-600"  bg="bg-green-50 dark:bg-green-950/30"  icon={ArrowUpRight} />
+        </div>
+
+        {/* Stat grid row 2 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatBox label="Internship Apps"  value={internshipApps} color="text-cyan-600"   bg="bg-cyan-50 dark:bg-cyan-950/30"   icon={Briefcase} />
+          <StatBox label="Full-Time Apps"   value={fullTimeApps}   color="text-violet-600" bg="bg-violet-50 dark:bg-violet-950/30" icon={UserRound} />
+          <StatBox label="Interviews Passed" value={ivPassed}      color="text-emerald-600" bg="bg-emerald-50 dark:bg-emerald-950/30" icon={CalendarDays} />
+          <StatBox label="Interviews Failed" value={ivFailed + rejected} color="text-red-600" bg="bg-red-50 dark:bg-red-950/30" icon={AlertTriangle} />
+        </div>
+
+        {/* Application status pipeline */}
+        {apps.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Application Pipeline</CardTitle>
+              <CardDescription>Breakdown of your {apps.length} application{apps.length !== 1 ? 's' : ''} by status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2.5">
+                {statusCounts.filter(s => s.count > 0).map(({ status, count }) => (
+                  <div key={status} className="flex items-center gap-3">
+                    <div className="w-36 shrink-0 text-xs font-medium text-muted-foreground truncate">{status}</div>
+                    <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${statusColors[status] ?? 'bg-gray-400'} transition-all`}
+                        style={{ width: `${Math.round((count / apps.length) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="w-6 text-xs font-semibold text-right">{count}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>Pending interviews: <strong className="text-foreground">{ivPending}</strong></span>
+                <span>Passed: <strong className="text-emerald-600">{ivPassed}</strong></span>
+                <span>Failed: <strong className="text-red-500">{ivFailed}</strong></span>
+                <span>Rejected: <strong className="text-gray-500">{rejected}</strong></span>
               </div>
             </CardContent>
           </Card>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <MetricCard label="Applications" value={applications?.length ?? 0} hint="Your submitted applications" icon={ArrowUpRight} />
-            <MetricCard
-              label="Next Interview"
-              value={nextInterview ? formatDate(nextInterview.interview_date, 'MMM d') : 'None'}
-              hint={nextInterview ? one(one(nextInterview.application)?.company)?.company_name ?? 'Scheduled' : 'No pending interview'}
-              icon={CalendarDays}
-            />
-          </div>
-        </section>
+        )}
 
         <div className="grid gap-4 xl:grid-cols-2">
+          {/* Recent applications */}
           <Card>
             <CardHeader>
-              <CardTitle>My Applications</CardTitle>
-              <CardDescription>Update what you already applied for from the Applications page.</CardDescription>
+              <CardTitle>Recent Applications</CardTitle>
+              <CardDescription>Your latest {Math.min(apps.length, 5)} of {apps.length} applications</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(applications ?? []).length === 0 ? (
+              {apps.length === 0 ? (
                 <EmptyState text="No applications yet." />
               ) : (
-                applications!.slice(0, 5).map(app => (
-                  <div key={app.id} className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <p className="font-medium">{one(app.company)?.company_name ?? 'Unknown company'}</p>
-                      <p className="text-sm text-muted-foreground">{one(app.position)?.position_name ?? 'Unknown position'}</p>
+                apps.slice(0, 5).map(app => {
+                  const pos = one(app.position as { position_name: string; position_type: string }[] | null)
+                  return (
+                    <div key={app.id} className="flex items-center justify-between rounded-lg border p-3 gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{one(app.company)?.company_name ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {pos?.position_name ?? '—'}
+                          {pos?.position_type && <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{pos.position_type}</span>}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <Badge className={APPLICATION_STATUS_COLORS[app.application_status] ?? 'bg-muted text-muted-foreground'}>
+                          {app.application_status}
+                        </Badge>
+                        <p className="mt-1 text-xs text-muted-foreground">{formatDate(app.application_date)}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <Badge className={APPLICATION_STATUS_COLORS[app.application_status] ?? 'bg-muted text-muted-foreground'}>
-                        {app.application_status}
-                      </Badge>
-                      <p className="mt-1 text-xs text-muted-foreground">{formatDate(app.application_date)}</p>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </CardContent>
           </Card>
 
+          {/* Interviews */}
           <Card>
             <CardHeader>
-              <CardTitle>Interviews</CardTitle>
-              <CardDescription>Keep track of interview dates, times, and outcomes.</CardDescription>
+              <CardTitle>Interview History</CardTitle>
+              <CardDescription>{ivs.length} total · {ivPassed} passed · {ivFailed} failed · {ivPending} pending</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(interviews ?? []).length === 0 ? (
+              {ivs.length === 0 ? (
                 <EmptyState text="No interviews scheduled yet." />
               ) : (
-                interviews!.slice(0, 5).map(interview => (
+                ivs.slice(0, 5).map(interview => (
                   <div key={interview.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{one(one(interview.application)?.company)?.company_name ?? 'Unknown company'}</p>
-                        <p className="text-sm text-muted-foreground">{one(one(interview.application)?.position)?.position_name ?? 'Unknown position'}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{one(one(interview.application)?.company)?.company_name ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{one(one(interview.application)?.position)?.position_name ?? '—'}</p>
                       </div>
-                      <Badge variant="outline">{interview.result}</Badge>
+                      <Badge variant={interview.result === 'Passed' ? 'default' : 'outline'}
+                        className={interview.result === 'Passed' ? 'bg-green-500' : interview.result === 'Failed' ? 'border-red-300 text-red-600' : ''}>
+                        {interview.result}
+                      </Badge>
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">
+                    <p className="mt-1.5 text-xs text-muted-foreground">
                       {formatDate(interview.interview_date)}
                       {interview.interview_time ? ` at ${interview.interview_time}` : ''}
-                      {interview.interview_type ? ` • ${interview.interview_type}` : ''}
+                      {interview.interview_type ? ` · ${interview.interview_type}` : ''}
                     </p>
                   </div>
                 ))
@@ -142,62 +219,55 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Internships</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {(internships ?? []).length === 0 ? (
-                <EmptyState text="No internship record yet." />
-              ) : (
-                internships!.slice(0, 4).map(item => (
-                  <div key={item.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{one(item.company)?.company_name ?? 'Unknown company'}</p>
-                        <p className="text-sm text-muted-foreground">{item.position}</p>
+        {/* Internship + Employment */}
+        {((internships?.length ?? 0) > 0 || (employment?.length ?? 0) > 0) && (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {(internships?.length ?? 0) > 0 && (
+              <Card>
+                <CardHeader><CardTitle>Internships</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {internships!.slice(0, 4).map(item => (
+                    <div key={item.id} className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{one(item.company)?.company_name ?? '—'}</p>
+                          <p className="text-sm text-muted-foreground">{item.position}</p>
+                        </div>
+                        <Badge variant="outline">{item.internship_status}</Badge>
                       </div>
-                      <Badge variant="outline">{item.internship_status}</Badge>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {formatDate(item.start_date)}{item.end_date ? ` → ${formatDate(item.end_date)}` : ''}
+                        {item.allowance != null ? ` · ${formatCurrency(item.allowance)}/mo` : ''}
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {formatDate(item.start_date)}
-                      {item.end_date ? ` to ${formatDate(item.end_date)}` : ''}
-                      {item.allowance != null ? ` • ${formatCurrency(item.allowance)}/mo` : ''}
-                    </p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Employment</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {(employment ?? []).length === 0 ? (
-                <EmptyState text="No employment record yet." />
-              ) : (
-                employment!.slice(0, 4).map(item => (
-                  <div key={item.id} className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{item.company_name}</p>
-                        <p className="text-sm text-muted-foreground">{item.position}</p>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+            {(employment?.length ?? 0) > 0 && (
+              <Card>
+                <CardHeader><CardTitle>Employment</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  {employment!.slice(0, 4).map(item => (
+                    <div key={item.id} className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{item.company_name}</p>
+                          <p className="text-sm text-muted-foreground">{item.position}</p>
+                        </div>
+                        <Badge variant="outline">{item.employment_status}</Badge>
                       </div>
-                      <Badge variant="outline">{item.employment_status}</Badge>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {formatDate(item.start_date)}
+                        {item.salary != null ? ` · ${formatCurrency(item.salary)}/mo` : ''}
+                      </p>
                     </div>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {formatDate(item.start_date)}
-                      {item.salary != null ? ` • ${formatCurrency(item.salary)}/mo` : ''}
-                    </p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     )
   }
@@ -539,6 +609,28 @@ function MetricCard({
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function StatBox({
+  label, value, color, bg, icon: Icon,
+}: {
+  label: string
+  value: number
+  color: string
+  bg: string
+  icon: typeof UserRound
+}) {
+  return (
+    <div className={`rounded-xl border p-4 flex items-center gap-3 ${bg}`}>
+      <div className={`rounded-lg p-2 bg-white/60 dark:bg-white/10 shrink-0`}>
+        <Icon className={`h-5 w-5 ${color}`} />
+      </div>
+      <div className="min-w-0">
+        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+        <p className="text-xs text-muted-foreground leading-tight">{label}</p>
+      </div>
+    </div>
   )
 }
 
