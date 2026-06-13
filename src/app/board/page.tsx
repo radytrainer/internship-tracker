@@ -47,19 +47,11 @@ export default async function PublicBoardPage() {
   const stus = students ?? []
   const ivs  = interviews ?? []
 
-  const countMap: Record<string, number> = {}
-  apps.forEach(a => { countMap[a.company_id] = (countMap[a.company_id] ?? 0) + 1 })
-
-  const topIds = Object.entries(countMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([id]) => id)
-
-  const topCompanies = topIds.map(cid => {
-    const company = cos.find(c => c.id === cid)!
-    const compApps = apps.filter(a => a.company_id === cid)
+  // Build full enriched data for every visible company
+  const allCompanies = cos.map(company => {
+    const compApps = apps.filter(a => a.company_id === company.id)
     const compPositions = pos
-      .filter(p => p.company_id === cid)
+      .filter(p => p.company_id === company.id)
       .map(p => ({
         ...p,
         application_count: compApps.filter(a => a.position_id === p.id).length,
@@ -68,6 +60,11 @@ export default async function PublicBoardPage() {
 
     const isFull = compPositions.length > 0 &&
       compPositions.every(p => p.application_count >= p.max_students * 2)
+
+    const total_remaining = compPositions.reduce(
+      (sum, p) => sum + Math.max(0, p.max_students * 2 - p.application_count),
+      0
+    )
 
     const detailedApps = compApps
       .map(app => {
@@ -82,12 +79,25 @@ export default async function PublicBoardPage() {
 
     return {
       ...company,
-      total_applications: countMap[cid],
+      total_applications: compApps.length,
+      total_remaining,
       positions: compPositions,
       applications: detailedApps,
       isFull,
     }
   })
 
-  return <BoardPage companies={topCompanies} />
+  // Tab 1: top 10 by most applications
+  const topCompanies = [...allCompanies]
+    .filter(c => c.total_applications > 0)
+    .sort((a, b) => b.total_applications - a.total_applications)
+    .slice(0, 10)
+
+  // Tab 2: top 10 by most remaining slots (still has open capacity)
+  const availableCompanies = [...allCompanies]
+    .filter(c => c.total_remaining > 0)
+    .sort((a, b) => b.total_remaining - a.total_remaining)
+    .slice(0, 10)
+
+  return <BoardPage topCompanies={topCompanies} availableCompanies={availableCompanies} />
 }

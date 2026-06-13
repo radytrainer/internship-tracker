@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { GraduationCap, Building2, Globe, Mail, Phone, MapPin, LogIn, ChevronRight } from 'lucide-react'
+import { GraduationCap, Building2, Globe, Mail, Phone, MapPin, LogIn, ChevronRight, TrendingUp, Sparkles } from 'lucide-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = any
@@ -47,10 +48,138 @@ function fmt(d: string | null | undefined) {
 }
 
 interface BoardPageProps {
-  companies: AnyRecord[]
+  topCompanies: AnyRecord[]
+  availableCompanies: AnyRecord[]
 }
 
-export function BoardPage({ companies }: BoardPageProps) {
+function CompanyCard({ company, rank, mode, onClick }: {
+  company: AnyRecord
+  rank: number
+  mode: 'popular' | 'available'
+  onClick: () => void
+}) {
+  const isAvailableMode = mode === 'available'
+  const metric = isAvailableMode ? company.total_remaining : company.total_applications
+  const metricLabel = isAvailableMode ? 'remaining' : 'applied'
+  const accentColor = isAvailableMode
+    ? 'text-emerald-700'
+    : (company.isFull ? 'text-red-600' : 'text-blue-700')
+  const accentSub = isAvailableMode
+    ? 'text-emerald-500'
+    : (company.isFull ? 'text-red-400' : 'text-blue-500')
+
+  return (
+    <button
+      onClick={onClick}
+      className={`relative group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 text-left p-5 space-y-3 ${
+        !isAvailableMode && company.isFull
+          ? 'border-2 border-red-400 ring-2 ring-red-100'
+          : isAvailableMode
+          ? 'border border-emerald-200 hover:border-emerald-400'
+          : 'border border-gray-200 hover:border-blue-200'
+      }`}
+    >
+      {!isAvailableMode && company.isFull && (
+        <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full z-10">
+          FULL
+        </span>
+      )}
+
+      {/* Company header */}
+      <div className="flex items-start gap-3">
+        {company.logo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={company.logo_url} alt={company.company_name} className="h-12 w-12 rounded-xl object-cover shrink-0" />
+        ) : (
+          <div className={`h-12 w-12 rounded-xl ${avatarColor(company.company_name)} flex items-center justify-center shrink-0 text-white font-bold text-lg`}>
+            {initials(company.company_name)}
+          </div>
+        )}
+        <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-muted-foreground">#{rank + 1}</span>
+              <h3 className="font-semibold text-gray-900 truncate">{company.company_name}</h3>
+            </div>
+            {company.industry && (
+              <a href={company.industry} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline mt-0.5">
+                Telegram
+              </a>
+            )}
+          </div>
+          <div className="text-right shrink-0">
+            <p className={`text-2xl font-bold leading-none ${accentColor}`}>{metric}</p>
+            <p className={`text-xs mt-0.5 ${accentSub}`}>{metricLabel}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Positions */}
+      {company.positions.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Positions</p>
+          {company.positions.slice(0, 4).map((p: AnyRecord) => {
+            const positionFull = p.application_count >= p.max_students * 2
+            const remaining = Math.max(0, p.max_students * 2 - p.application_count)
+            return (
+              <div key={p.id} className="flex items-center justify-between text-sm gap-2">
+                <span className="text-gray-700 truncate flex-1">{p.position_name}</span>
+                <span className="text-xs text-muted-foreground shrink-0">needs {p.max_students}</span>
+                {isAvailableMode ? (
+                  <span className={`text-xs font-semibold rounded-full px-2 py-0.5 shrink-0 ${
+                    positionFull ? 'bg-red-100 text-red-600' : 'bg-emerald-50 text-emerald-600'
+                  }`}>
+                    {remaining} left
+                  </span>
+                ) : (
+                  <span className={`text-xs font-semibold rounded-full px-2 py-0.5 shrink-0 ${
+                    positionFull ? 'bg-red-100 text-red-600' : 'bg-blue-50 text-blue-600'
+                  }`}>
+                    {p.application_count}/{p.max_students * 2}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+          {company.positions.length > 4 && (
+            <p className="text-xs text-muted-foreground">+{company.positions.length - 4} more positions</p>
+          )}
+        </div>
+      )}
+
+      <div className={`flex items-center justify-end text-xs font-medium gap-1 pt-1 ${
+        isAvailableMode ? 'text-emerald-500 group-hover:text-emerald-700' : 'text-blue-500 group-hover:text-blue-700'
+      }`}>
+        View details <ChevronRight className="h-3.5 w-3.5" />
+      </div>
+    </button>
+  )
+}
+
+function CompanyGrid({ companies, mode, onSelect }: {
+  companies: AnyRecord[]
+  mode: 'popular' | 'available'
+  onSelect: (c: AnyRecord) => void
+}) {
+  if (companies.length === 0) {
+    return (
+      <div className="text-center py-24 text-muted-foreground">
+        <Building2 className="h-12 w-12 mx-auto mb-3 opacity-20" />
+        <p>{mode === 'available' ? 'All positions are currently full.' : 'No applications yet.'}</p>
+      </div>
+    )
+  }
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {companies.map((company, rank) => (
+        <CompanyCard key={company.id} company={company} rank={rank} mode={mode} onClick={() => onSelect(company)} />
+      ))}
+    </div>
+  )
+}
+
+export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) {
   const [selected, setSelected] = useState<AnyRecord | null>(null)
 
   return (
@@ -73,104 +202,39 @@ export function BoardPage({ companies }: BoardPageProps) {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Top Companies</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Most applied internship opportunities</p>
+        <Tabs defaultValue="popular">
+          <div className="flex items-center justify-between mb-6">
+            <TabsList className="h-10">
+              <TabsTrigger value="popular" className="gap-2">
+                <TrendingUp className="h-4 w-4" />Most Applied
+              </TabsTrigger>
+              <TabsTrigger value="available" className="gap-2">
+                <Sparkles className="h-4 w-4" />Most Available
+              </TabsTrigger>
+            </TabsList>
+            <div className="flex gap-2">
+              <TabsContent value="popular" className="mt-0">
+                <Badge variant="secondary" className="text-sm px-3 py-1">{topCompanies.length} companies</Badge>
+              </TabsContent>
+              <TabsContent value="available" className="mt-0">
+                <Badge variant="secondary" className="text-sm px-3 py-1 bg-emerald-100 text-emerald-700">{availableCompanies.length} companies</Badge>
+              </TabsContent>
+            </div>
           </div>
-          <Badge variant="secondary" className="text-sm px-3 py-1">{companies.length} companies</Badge>
-        </div>
 
-        {/* Company cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {companies.map((company, rank) => (
-            <button
-              key={company.id}
-              onClick={() => setSelected(company)}
-              className={`relative group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 text-left p-5 space-y-3 ${
-                company.isFull
-                  ? 'border-2 border-red-400 ring-2 ring-red-100'
-                  : 'border border-gray-200 hover:border-blue-200'
-              }`}
-            >
-              {/* Full badge */}
-              {company.isFull && (
-                <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full z-10">
-                  FULL
-                </span>
-              )}
+          <TabsContent value="popular">
+            <p className="text-sm text-muted-foreground mb-4">Top 10 companies with the most student applications</p>
+            <CompanyGrid companies={topCompanies} mode="popular" onSelect={setSelected} />
+          </TabsContent>
 
-              {/* Company header */}
-              <div className="flex items-start gap-3">
-                {company.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={company.logo_url} alt={company.company_name} className="h-12 w-12 rounded-xl object-cover shrink-0" />
-                ) : (
-                  <div className={`h-12 w-12 rounded-xl ${avatarColor(company.company_name)} flex items-center justify-center shrink-0 text-white font-bold text-lg`}>
-                    {initials(company.company_name)}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-muted-foreground">#{rank + 1}</span>
-                      <h3 className="font-semibold text-gray-900 truncate">{company.company_name}</h3>
-                    </div>
-                    {company.industry && (
-                      <a href={company.industry} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline mt-0.5">Telegram</a>
-                    )}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className={`text-2xl font-bold leading-none ${company.isFull ? 'text-red-600' : 'text-blue-700'}`}>
-                      {company.total_applications}
-                    </p>
-                    <p className={`text-xs mt-0.5 ${company.isFull ? 'text-red-400' : 'text-blue-500'}`}>applied</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Positions */}
-              {company.positions.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Positions</p>
-                  {company.positions.slice(0, 4).map((p: AnyRecord) => {
-                    const positionFull = p.application_count >= p.max_students * 2
-                    return (
-                      <div key={p.id} className="flex items-center justify-between text-sm gap-2">
-                        <span className="text-gray-700 truncate flex-1">{p.position_name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">needs {p.max_students}</span>
-                        <span className={`text-xs font-semibold rounded-full px-2 py-0.5 shrink-0 ${
-                          positionFull
-                            ? 'bg-red-100 text-red-600'
-                            : 'bg-blue-50 text-blue-600'
-                        }`}>
-                          {p.application_count}/{p.max_students * 2}
-                        </span>
-                      </div>
-                    )
-                  })}
-                  {company.positions.length > 4 && (
-                    <p className="text-xs text-muted-foreground">+{company.positions.length - 4} more positions</p>
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end text-xs text-blue-500 group-hover:text-blue-700 font-medium gap-1 pt-1">
-                View details <ChevronRight className="h-3.5 w-3.5" />
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {companies.length === 0 && (
-          <div className="text-center py-24 text-muted-foreground">
-            <Building2 className="h-12 w-12 mx-auto mb-3 opacity-20" />
-            <p>No applications yet.</p>
-          </div>
-        )}
+          <TabsContent value="available">
+            <p className="text-sm text-muted-foreground mb-4">Top 10 companies with the most open slots still available</p>
+            <CompanyGrid companies={availableCompanies} mode="available" onSelect={setSelected} />
+          </TabsContent>
+        </Tabs>
       </main>
 
-      {/* Detail sheet */}
+      {/* Detail sheet — shared across both tabs */}
       <Sheet open={!!selected} onOpenChange={open => { if (!open) setSelected(null) }}>
         <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
           {selected && (
@@ -192,13 +256,21 @@ export function BoardPage({ companies }: BoardPageProps) {
                         <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">FULL</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                       {selected.industry && (
-                        <a href={selected.industry} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline">Telegram</a>
+                        <a href={selected.industry} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline">
+                          Telegram
+                        </a>
                       )}
                       <span className={`font-semibold ${selected.isFull ? 'text-red-600' : 'text-blue-600'}`}>
-                        {selected.total_applications} applications
+                        {selected.total_applications} applied
                       </span>
+                      {selected.total_remaining > 0 && (
+                        <span className="font-semibold text-emerald-600">
+                          {selected.total_remaining} remaining
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -226,6 +298,7 @@ export function BoardPage({ companies }: BoardPageProps) {
                 <div className="flex flex-wrap gap-2">
                   {selected.positions.map((p: AnyRecord) => {
                     const positionFull = p.application_count >= p.max_students * 2
+                    const remaining = Math.max(0, p.max_students * 2 - p.application_count)
                     return (
                       <div key={p.id} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ${positionFull ? 'bg-red-50' : 'bg-muted'}`}>
                         <span className="font-medium">{p.position_name}</span>
@@ -233,6 +306,11 @@ export function BoardPage({ companies }: BoardPageProps) {
                         <Badge variant={positionFull ? 'destructive' : 'secondary'} className="text-xs">
                           {p.application_count}/{p.max_students * 2} applied
                         </Badge>
+                        {!positionFull && (
+                          <Badge className="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                            {remaining} left
+                          </Badge>
+                        )}
                       </div>
                     )
                   })}
