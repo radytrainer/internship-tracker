@@ -30,6 +30,11 @@ function fmtIntake(date: string | null | undefined) {
   return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
+function isOverDeadline(date: string | null | undefined) {
+  if (!date) return false
+  return new Date(date) < new Date(new Date().toDateString())
+}
+
 export function PositionTable({ positions, companies, role }: PositionTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -41,13 +46,22 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
 
   const canManage = role === 'admin'
 
-  const filtered = useMemo(() => positions.filter(p => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || p.position_name.toLowerCase().includes(q) ||
-      (p as AnyRecord).company?.company_name.toLowerCase().includes(q)
-    const matchCompany = filterCompany === 'all' || p.company_id === filterCompany
-    return matchSearch && matchCompany
-  }), [positions, search, filterCompany])
+  const filtered = useMemo(() => {
+    const results = positions.filter(p => {
+      const q = search.toLowerCase()
+      const matchSearch = !q || p.position_name.toLowerCase().includes(q) ||
+        (p as AnyRecord).company?.company_name.toLowerCase().includes(q)
+      const matchCompany = filterCompany === 'all' || p.company_id === filterCompany
+      return matchSearch && matchCompany
+    })
+    // overdue positions sink to the bottom
+    return results.sort((a, b) => {
+      const aOver = isOverDeadline(a.intake_date)
+      const bOver = isOverDeadline(b.intake_date)
+      if (aOver === bOver) return 0
+      return aOver ? 1 : -1
+    })
+  }, [positions, search, filterCompany])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -105,8 +119,9 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
             ) : (
               filtered.map(pos => {
                 const p = pos as AnyRecord
+                const overdue = isOverDeadline(p.intake_date)
                 return (
-                  <TableRow key={p.id}>
+                  <TableRow key={p.id} className={overdue ? 'bg-red-50 dark:bg-red-950/20 opacity-70' : ''}>
                     <TableCell className="font-medium">{p.position_name}</TableCell>
                     <TableCell>
                       <Badge
@@ -119,8 +134,11 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
                       </Badge>
                     </TableCell>
                     <TableCell>{p.company?.company_name ?? '—'}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                      {fmtIntake(p.intake_date) ?? '—'}
+                    <TableCell className="text-sm whitespace-nowrap">
+                      <span className={overdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}>
+                        {fmtIntake(p.intake_date) ?? '—'}
+                      </span>
+                      {overdue && <span className="ml-1.5 text-[10px] font-semibold text-red-500 uppercase tracking-wide">Overdue</span>}
                     </TableCell>
                     <TableCell><Badge variant="outline">{p.max_students} students</Badge></TableCell>
                     <TableCell>
