@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -60,7 +60,7 @@ export function PositionForm({ open, onClose, position, companies }: {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{position ? 'Edit Position' : 'Add New Position'}</DialogTitle></DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -76,7 +76,7 @@ export function PositionForm({ open, onClose, position, companies }: {
                 <FormMessage />
               </FormItem>
             )} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="position_name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Position Name *</FormLabel>
@@ -98,7 +98,7 @@ export function PositionForm({ open, onClose, position, companies }: {
                 </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="max_students" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Max Students *</FormLabel>
@@ -143,3 +143,4 @@ export function PositionForm({ open, onClose, position, companies }: {
     </Dialog>
   )
 }
+

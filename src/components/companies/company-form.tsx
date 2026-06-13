@@ -98,7 +98,7 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
               </FormItem>
             )} />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="company_name" render={({ field }) => (
                 <FormItem className="col-span-2">
                   <FormLabel>Company Name *</FormLabel>

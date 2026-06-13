@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -118,7 +118,7 @@ export function StudentForm({ open, onClose, student, classes, generations }: St
               </FormItem>
             )} />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="student_code" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Student Code *</FormLabel>
@@ -229,3 +229,4 @@ export function StudentForm({ open, onClose, student, classes, generations }: St
     </Dialog>
   )
 }
+

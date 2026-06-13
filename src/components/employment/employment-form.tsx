@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -94,7 +94,7 @@ export function EmploymentForm({ open, onClose, record, students }: EmploymentFo
                 <FormMessage />
               </FormItem>
             )} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="company_name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Employer *</FormLabel>
@@ -110,7 +110,7 @@ export function EmploymentForm({ open, onClose, record, students }: EmploymentFo
                 </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="employment_type" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type *</FormLabel>
@@ -136,7 +136,7 @@ export function EmploymentForm({ open, onClose, record, students }: EmploymentFo
                 </FormItem>
               )} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="start_date" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Start Date</FormLabel>
@@ -185,3 +185,4 @@ export function EmploymentForm({ open, onClose, record, students }: EmploymentFo
     </Dialog>
   )
 }
+

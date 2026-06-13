@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -76,7 +76,7 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
   }
 
   const getAppLabel = (a: ApplicationOption) =>
-    `${a.student?.first_name ?? ''} ${a.student?.last_name ?? ''} — ${a.company?.company_name ?? ''} / ${a.position?.position_name ?? ''}`
+    `${a.student?.first_name ?? ''} ${a.student?.last_name ?? ''} â€” ${a.company?.company_name ?? ''} / ${a.position?.position_name ?? ''}`
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
@@ -98,7 +98,7 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
                 <FormMessage />
               </FormItem>
             )} />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="interview_date" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Date *</FormLabel>
@@ -114,7 +114,7 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
                 </FormItem>
               )} />
             </div>
-            <div className={`grid gap-4 ${isStudent ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            <div className={`grid gap-4 ${isStudent ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
               <FormField control={form.control} name="interview_type" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type *</FormLabel>
@@ -178,3 +178,4 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
     </Dialog>
   )
 }
+

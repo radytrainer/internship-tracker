@@ -169,7 +169,7 @@ export function StudentDetailSheet({ student, open, onClose }: StudentDetailShee
               ) : data && (
                 <div className="p-6 space-y-6">
                   {/* Stats */}
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <StatCard icon={FileText}     label="Applications"    value={data.applications.length}  color="text-blue-600" />
                     <StatCard icon={Building2}    label="Companies"       value={uniqueCompanies}            color="text-indigo-600" />
                     <StatCard icon={MessageSquare} label="Interviews"     value={data.interviews.length}    color="text-purple-600" />

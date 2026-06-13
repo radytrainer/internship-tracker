@@ -1,5 +1,5 @@
-const CACHE = 'interntrack-v1'
-const PRECACHE = ['/', '/dashboard', '/applications', '/interviews', '/offline']
+const CACHE = 'interntrack-v2'
+const PRECACHE = ['/offline']
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -19,45 +19,31 @@ self.addEventListener('fetch', e => {
   const { request } = e
   const url = new URL(request.url)
 
-  // Skip non-GET, Supabase API, and Next.js internals
   if (request.method !== 'GET') return
   if (url.hostname.includes('supabase.co')) return
   if (url.pathname.startsWith('/_next/webpack-hmr')) return
+  if (url.pathname.startsWith('/api/auth')) return
 
   // Static assets — cache first
-  if (url.pathname.startsWith('/_next/static') || url.pathname.startsWith('/icons')) {
+  if (url.pathname.startsWith('/_next/static') || url.pathname.startsWith('/icons') || url.pathname.startsWith('/api/pwa-icon')) {
     e.respondWith(
       caches.match(request).then(cached => cached ?? fetch(request).then(res => {
-        const clone = res.clone()
-        caches.open(CACHE).then(c => c.put(request, clone))
+        if (res.ok) {
+          const clone = res.clone()
+          caches.open(CACHE).then(c => c.put(request, clone))
+        }
         return res
       }))
     )
     return
   }
 
-  // HTML navigation — network first, fall back to cache, then /offline
+  // HTML navigation — network first, fall back to offline page
   if (request.mode === 'navigate') {
     e.respondWith(
       fetch(request)
-        .then(res => {
-          const clone = res.clone()
-          caches.open(CACHE).then(c => c.put(request, clone))
-          return res
-        })
-        .catch(() => caches.match(request).then(cached => cached ?? caches.match('/offline')))
+        .catch(() => caches.match('/offline').then(r => r ?? new Response('Offline', { status: 503 })))
     )
     return
   }
-
-  // Everything else — network first with cache fallback
-  e.respondWith(
-    fetch(request)
-      .then(res => {
-        const clone = res.clone()
-        caches.open(CACHE).then(c => c.put(request, clone))
-        return res
-      })
-      .catch(() => caches.match(request))
-  )
 })

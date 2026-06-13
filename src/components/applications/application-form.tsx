@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -172,7 +172,7 @@ export function ApplicationForm({
                       {filteredPositions.map(position => (
                         <SelectItem key={position.id} value={position.id}>
                           {position.position_name}
-                          {position.intake_date && ` — ${new Date(position.intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`}
+                          {position.intake_date && ` â€” ${new Date(position.intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`}
                           {` (max ${position.max_students})`}
                         </SelectItem>
                       ))}
@@ -182,7 +182,7 @@ export function ApplicationForm({
                 </FormItem>
               )} />
 
-              <div className={`grid gap-4 ${isStudent ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              <div className={`grid gap-4 ${isStudent ? 'grid-cols-1' : 'sm:grid-cols-2'}`}>
                 <FormField control={form.control} name="application_date" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Application Date *</FormLabel>
@@ -254,3 +254,4 @@ export function ApplicationForm({
     </>
   )
 }
+
