@@ -92,7 +92,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
               <TableHead>Position</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Company</TableHead>
-              <TableHead>Intake</TableHead>
+              <TableHead>Deadline</TableHead>
               <TableHead>Slots</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Description</TableHead>

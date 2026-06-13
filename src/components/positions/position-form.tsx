@@ -108,9 +108,9 @@ export function PositionForm({ open, onClose, position, companies }: {
               )} />
               <FormField control={form.control} name="intake_date" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Intake Date</FormLabel>
+                  <FormLabel>Deadline</FormLabel>
                   <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
-                  <p className="text-xs text-muted-foreground">When this batch starts</p>
+                  <p className="text-xs text-muted-foreground">Application deadline for this batch</p>
                   <FormMessage />
                 </FormItem>
               )} />
