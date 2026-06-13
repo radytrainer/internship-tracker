@@ -20,6 +20,7 @@ const schema = z.object({
   company_id: z.string().uuid('Select a company'),
   position_name: z.string().min(1, 'Required'),
   max_students: z.coerce.number().int().min(1).default(5),
+  intake_date: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   is_active: z.boolean().default(true),
 })
@@ -31,14 +32,14 @@ export function PositionForm({ open, onClose, position, companies }: {
 }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { company_id: '', position_name: '', max_students: 5, description: '', is_active: true },
+    defaultValues: { company_id: '', position_name: '', max_students: 5, intake_date: '', description: '', is_active: true },
   })
 
   useEffect(() => {
     if (position) {
-      form.reset({ company_id: position.company_id, position_name: position.position_name, max_students: position.max_students, description: position.description ?? '', is_active: position.is_active })
+      form.reset({ company_id: position.company_id, position_name: position.position_name, max_students: position.max_students, intake_date: position.intake_date ?? '', description: position.description ?? '', is_active: position.is_active })
     } else {
-      form.reset({ company_id: '', position_name: '', max_students: 5, description: '', is_active: true })
+      form.reset({ company_id: '', position_name: '', max_students: 5, intake_date: '', description: '', is_active: true })
     }
   }, [position, open, form])
 
@@ -81,18 +82,23 @@ export function PositionForm({ open, onClose, position, companies }: {
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="is_active" render={({ field }) => (
-                <FormItem className="flex flex-col justify-end">
-                  <FormLabel>Active</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-2 h-10">
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      <span className="text-sm text-muted-foreground">{field.value ? 'Active' : 'Inactive'}</span>
-                    </div>
-                  </FormControl>
+              <FormField control={form.control} name="intake_date" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Intake Date</FormLabel>
+                  <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
+                  <p className="text-xs text-muted-foreground">When this batch starts</p>
+                  <FormMessage />
                 </FormItem>
               )} />
             </div>
+            <FormField control={form.control} name="is_active" render={({ field }) => (
+              <FormItem className="flex items-center gap-3">
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <FormLabel className="!mt-0">Active</FormLabel>
+              </FormItem>
+            )} />
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
                 <FormLabel>Description</FormLabel>

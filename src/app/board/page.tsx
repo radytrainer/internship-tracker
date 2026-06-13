@@ -36,7 +36,7 @@ export default async function PublicBoardPage() {
   ] = await Promise.all([
     admin.from('internship_applications').select('id, company_id, position_id, student_id, application_date, application_status'),
     admin.from('companies').select('id, company_name, industry, website, contact_email, contact_phone, address, logo_url').eq('is_visible', true),
-    admin.from('company_positions').select('id, company_id, position_name, max_students'),
+    admin.from('company_positions').select('id, company_id, position_name, max_students, intake_date'),
     admin.from('students').select('id, first_name, last_name, student_code'),
     admin.from('interviews').select('id, application_id, interview_date, interview_type, result'),
   ])

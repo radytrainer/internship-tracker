@@ -96,6 +96,7 @@ export interface CompanyPosition {
   company_id: string
   position_name: string
   max_students: number
+  intake_date: string | null
   description: string | null
   is_active: boolean
   created_at: string

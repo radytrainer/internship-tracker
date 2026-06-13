@@ -34,7 +34,7 @@ interface ApplicationFormProps {
   application: InternshipApplication | null
   students: { id: string; first_name: string; last_name: string; student_code: string }[]
   companies: { id: string; company_name: string }[]
-  positions: { id: string; position_name: string; company_id: string; max_students: number; is_active: boolean }[]
+  positions: { id: string; position_name: string; company_id: string; max_students: number; intake_date?: string | null; is_active: boolean }[]
   role: AppRole
   currentStudentId: string | null
 }
@@ -171,7 +171,9 @@ export function ApplicationForm({
                     <SelectContent>
                       {filteredPositions.map(position => (
                         <SelectItem key={position.id} value={position.id}>
-                          {position.position_name} (max {position.max_students})
+                          {position.position_name}
+                          {position.intake_date && ` — ${new Date(position.intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`}
+                          {` (max ${position.max_students})`}
                         </SelectItem>
                       ))}
                     </SelectContent>

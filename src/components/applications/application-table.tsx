@@ -20,7 +20,7 @@ interface ApplicationTableProps {
   applications: InternshipApplication[]
   students: { id: string; first_name: string; last_name: string; student_code: string }[]
   companies: { id: string; company_name: string }[]
-  positions: { id: string; position_name: string; company_id: string; max_students: number; is_active: boolean }[]
+  positions: { id: string; position_name: string; company_id: string; max_students: number; intake_date?: string | null; is_active: boolean }[]
   role: AppRole
   currentStudentId: string | null
 }
@@ -147,7 +147,14 @@ export function ApplicationTable({
                       </TableCell>
                     )}
                     <TableCell className="font-medium">{a.company?.company_name ?? '—'}</TableCell>
-                    <TableCell className="text-sm">{a.position?.position_name ?? '—'}</TableCell>
+                    <TableCell className="text-sm">
+                      {a.position?.position_name ?? '—'}
+                      {(a.position as any)?.intake_date && (
+                        <span className="block text-xs text-muted-foreground">
+                          {new Date((a.position as any).intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{formatDate(a.application_date)}</TableCell>
                     <TableCell>
                       <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', APPLICATION_STATUS_COLORS[a.application_status])}>

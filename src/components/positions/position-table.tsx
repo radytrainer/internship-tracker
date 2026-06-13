@@ -25,6 +25,11 @@ interface PositionTableProps {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = any
 
+function fmtIntake(date: string | null | undefined) {
+  if (!date) return null
+  return new Date(date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+
 export function PositionTable({ positions, companies, role }: PositionTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -86,6 +91,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
             <TableRow>
               <TableHead>Position</TableHead>
               <TableHead>Company</TableHead>
+              <TableHead>Intake</TableHead>
               <TableHead>Slots</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Description</TableHead>
@@ -94,7 +100,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={canManage ? 6 : 5} className="text-center text-muted-foreground py-10">No positions found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={canManage ? 7 : 6} className="text-center text-muted-foreground py-10">No positions found</TableCell></TableRow>
             ) : (
               filtered.map(pos => {
                 const p = pos as AnyRecord
@@ -102,6 +108,9 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.position_name}</TableCell>
                     <TableCell>{p.company?.company_name ?? '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      {fmtIntake(p.intake_date) ?? '—'}
+                    </TableCell>
                     <TableCell><Badge variant="outline">{p.max_students} students</Badge></TableCell>
                     <TableCell>
                       <Badge variant={p.is_active ? 'default' : 'secondary'} className={p.is_active ? 'bg-green-500' : ''}>
