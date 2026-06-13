@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Pencil, Trash2, Download, Upload, MoreHorizontal, MoreVertical, UserPlus, Users } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download, Upload, MoreHorizontal, MoreVertical, UserPlus, Users, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { StudentForm } from './student-form'
 import { StudentImport } from './student-import'
+import { StudentDetailSheet } from './student-detail-sheet'
 import { deleteStudent, deleteAllStudents, createStudentAuthAccount, createAllStudentAuthAccounts } from '@/app/actions/students'
 import { cn, formatDate, STUDENT_STATUS_COLORS } from '@/lib/utils'
 import { exportToCSV, exportToExcel } from '@/lib/export'
@@ -52,6 +53,7 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
   const [deleting, setDeleting] = useState(false)
   const [creatingLoginFor, setCreatingLoginFor] = useState<string | null>(null)
   const [creatingAllLogins, setCreatingAllLogins] = useState(false)
+  const [viewStudent, setViewStudent] = useState<Student | null>(null)
 
   const canManage = role === 'admin'
 
@@ -238,7 +240,10 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
                   <TableRow key={enrichedStudent.id}>
                     <TableCell className="font-mono text-xs font-semibold text-muted-foreground">{enrichedStudent.student_code}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-3">
+                      <button
+                        className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity w-full"
+                        onClick={() => setViewStudent(enrichedStudent)}
+                      >
                         {(enrichedStudent as Student & { avatar_url?: string | null }).avatar_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={(enrichedStudent as Student & { avatar_url?: string | null }).avatar_url!} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
@@ -252,7 +257,7 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
                           <p className="font-medium">{enrichedStudent.first_name} {enrichedStudent.last_name}</p>
                           {enrichedStudent.email && <p className="text-xs text-muted-foreground">{enrichedStudent.email}</p>}
                         </div>
-                      </div>
+                      </button>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={enrichedStudent.gender === 'Female' ? 'border-pink-200 text-pink-700' : 'border-blue-200 text-blue-700'}>
@@ -276,6 +281,10 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setViewStudent(enrichedStudent)}>
+                              <Eye className="mr-2 h-4 w-4" />View Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => { setEditStudent(enrichedStudent); setFormOpen(true) }}>
                               <Pencil className="mr-2 h-4 w-4" />Edit
                             </DropdownMenuItem>
@@ -372,6 +381,12 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
           />
         </>
       )}
+
+      <StudentDetailSheet
+        student={viewStudent}
+        open={!!viewStudent}
+        onClose={() => setViewStudent(null)}
+      />
     </div>
   )
 }
