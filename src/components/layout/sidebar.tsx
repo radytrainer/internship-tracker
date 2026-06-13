@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -36,12 +37,22 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onCollapse, profile }: SidebarProps) {
   const pathname = usePathname()
   const navItems = getNavItemsForRole(profile?.role)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 768)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  if (!isDesktop) return null
 
   return (
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full z-40 flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border hidden md:flex',
+          'fixed left-0 top-0 h-full z-40 flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border',
           collapsed ? 'w-16' : 'w-64'
         )}
       >
