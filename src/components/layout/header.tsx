@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
@@ -126,6 +126,7 @@ export function Header({ profile }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
+                {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? 'Avatar'} className="object-cover" />}
                 <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
                   {getInitials(profile?.full_name)}
                 </AvatarFallback>

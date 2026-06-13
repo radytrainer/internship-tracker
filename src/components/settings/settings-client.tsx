@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -9,9 +9,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, User, Shield, Bell } from 'lucide-react'
+import { Loader2, User, Shield, Bell, Camera } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { getInitials } from '@/lib/utils'
@@ -30,6 +30,9 @@ interface SettingsClientProps { profile: Profile | null; userEmail: string }
 
 export function SettingsClient({ profile, userEmail }: SettingsClientProps) {
   const [saving, setSaving] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(profile?.avatar_url ?? null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({
@@ -41,6 +44,50 @@ export function SettingsClient({ profile, userEmail }: SettingsClientProps) {
     resolver: zodResolver(passwordSchema),
     defaultValues: { password: '', confirm: '' },
   })
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !profile?.id) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5 MB')
+      return
+    }
+
+    setUploadingAvatar(true)
+    const ext = file.name.split('.').pop()
+    const path = `${profile.id}/avatar.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true })
+
+    if (uploadError) {
+      toast.error(uploadError.message)
+      setUploadingAvatar(false)
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    // Bust cache so the browser re-fetches the new image
+    const bustedUrl = `${publicUrl}?t=${Date.now()}`
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ avatar_url: bustedUrl })
+      .eq('id', profile.id)
+
+    setUploadingAvatar(false)
+    if (updateError) {
+      toast.error(updateError.message)
+    } else {
+      setAvatarUrl(bustedUrl)
+      toast.success('Profile photo updated')
+    }
+
+    // Reset so the same file can be re-selected if needed
+    e.target.value = ''
+  }
 
   const onSaveProfile = async (values: z.infer<typeof profileSchema>) => {
     setSaving(true)
@@ -74,19 +121,46 @@ export function SettingsClient({ profile, userEmail }: SettingsClientProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2"><User className="h-5 w-5 text-muted-foreground" /><CardTitle>Profile</CardTitle></div>
-          <CardDescription>Update your display name</CardDescription>
+          <CardDescription>Update your display name and photo</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="text-lg">{getInitials(profile?.full_name ?? userEmail)}</AvatarFallback>
-            </Avatar>
+            {/* Clickable avatar with camera overlay */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              className="relative group h-16 w-16 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Change profile photo"
+            >
+              <Avatar className="h-16 w-16">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt={profile?.full_name ?? 'Avatar'} className="object-cover" />}
+                <AvatarFallback className="text-lg">{getInitials(profile?.full_name ?? userEmail)}</AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploadingAvatar
+                  ? <Loader2 className="h-5 w-5 text-white animate-spin" />
+                  : <Camera className="h-5 w-5 text-white" />}
+              </div>
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+
             <div>
               <p className="font-semibold">{profile?.full_name ?? '—'}</p>
               <p className="text-sm text-muted-foreground">{userEmail}</p>
               <Badge variant="secondary" className="mt-1">{roleLabels[profile?.role ?? ''] ?? profile?.role}</Badge>
             </div>
           </div>
+
+          <p className="text-xs text-muted-foreground">Click your avatar to upload a new photo (PNG, JPG, WebP · max 5 MB)</p>
+
           <Separator />
           <Form {...profileForm}>
             <form onSubmit={profileForm.handleSubmit(onSaveProfile)} className="space-y-4">
@@ -143,7 +217,7 @@ export function SettingsClient({ profile, userEmail }: SettingsClientProps) {
         </CardContent>
       </Card>
 
-      {/* Notifications Card */}
+      {/* About Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2"><Bell className="h-5 w-5 text-muted-foreground" /><CardTitle>About</CardTitle></div>
