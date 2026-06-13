@@ -126,7 +126,7 @@ function CompanyCard({ company, rank, mode, onClick }: {
               <div key={p.id} className="flex items-center justify-between text-sm gap-2">
                 <span className="text-gray-700 truncate flex-1">
                   {p.position_name}
-                  {p.intake_date && <span className="text-xs text-muted-foreground ml-1">({new Date(p.intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })})</span>}
+                  {p.intake_date && <span className="text-xs text-muted-foreground ml-1">({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})</span>}
                 </span>
                 <span className="text-xs text-muted-foreground shrink-0">needs {p.max_students}</span>
                 {isAvailableMode ? (
@@ -326,7 +326,7 @@ export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) 
                       <div key={p.id} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ${positionFull ? 'bg-red-50' : 'bg-muted'}`}>
                         <span className="font-medium">
                           {p.position_name}
-                          {p.intake_date && <span className="text-xs font-normal text-muted-foreground ml-1">({new Date(p.intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })})</span>}
+                          {p.intake_date && <span className="text-xs font-normal text-muted-foreground ml-1">({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})</span>}
                         </span>
                         <Badge variant="outline" className="text-xs">needs {p.max_students}</Badge>
                         <Badge variant={positionFull ? 'destructive' : 'secondary'} className="text-xs">

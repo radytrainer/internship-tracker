@@ -151,7 +151,7 @@ export function ApplicationTable({
                       {a.position?.position_name ?? '—'}
                       {(a.position as any)?.intake_date && (
                         <span className="block text-xs text-muted-foreground">
-                          {new Date((a.position as any).intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+                          {new Date((a.position as any).intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
                         </span>
                       )}
                     </TableCell>

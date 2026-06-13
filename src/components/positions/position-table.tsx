@@ -27,7 +27,7 @@ type AnyRecord = any
 
 function fmtIntake(date: string | null | undefined) {
   if (!date) return null
-  return new Date(date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+  return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
 export function PositionTable({ positions, companies, role }: PositionTableProps) {
