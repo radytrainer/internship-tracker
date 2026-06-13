@@ -15,6 +15,8 @@ const companySchema = z.object({
   website: z.string().url().optional().nullable().or(z.literal('')),
   max_students_per_company: z.number().int().min(0).default(10),
   is_visible: z.boolean().default(true),
+  has_mou: z.boolean().default(false),
+  is_blacklisted: z.boolean().default(false),
   notes: z.string().optional().nullable(),
   logo_url: z.string().url().optional().nullable().or(z.literal('')),
 })
@@ -119,6 +121,26 @@ export async function toggleCompanyVisibility(id: string, is_visible: boolean) {
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('companies').update({ is_visible }).eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/companies')
+  return { success: true, error: null }
+}
+
+export async function toggleCompanyMOU(id: string, has_mou: boolean) {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('companies').update({ has_mou }).eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/companies')
+  return { success: true, error: null }
+}
+
+export async function toggleCompanyBlacklist(id: string, is_blacklisted: boolean) {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('companies').update({ is_blacklisted }).eq('id', id)
   if (error) return { success: false, error: error.message }
   revalidatePath('/companies')
   return { success: true, error: null }

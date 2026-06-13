@@ -25,6 +25,8 @@ const schema = z.object({
   website: z.string().url().optional().nullable().or(z.literal('')),
   max_students_per_company: z.coerce.number().int().min(0).default(10),
   is_visible: z.boolean().default(true),
+  has_mou: z.boolean().default(false),
+  is_blacklisted: z.boolean().default(false),
   notes: z.string().optional().nullable(),
   logo_url: z.string().url().optional().nullable().or(z.literal('')),
 })
@@ -34,7 +36,8 @@ type FormValues = z.infer<typeof schema>
 const EMPTY: FormValues = {
   company_name: '', industry: '', address: '', contact_person: '',
   contact_email: '', contact_phone: '', website: '',
-  max_students_per_company: 10, is_visible: true, notes: '', logo_url: '',
+  max_students_per_company: 10, is_visible: true, has_mou: false, is_blacklisted: false,
+  notes: '', logo_url: '',
 }
 
 export function CompanyForm({ open, onClose, company }: { open: boolean; onClose: () => void; company: (Company & { logo_url?: string | null }) | null }) {
@@ -52,6 +55,8 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
         website: company.website ?? '',
         max_students_per_company: company.max_students_per_company,
         is_visible: company.is_visible ?? true,
+        has_mou: company.has_mou ?? false,
+        is_blacklisted: company.is_blacklisted ?? false,
         notes: company.notes ?? '',
         logo_url: company.logo_url ?? '',
       })
@@ -166,6 +171,30 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
                   <div>
                     <FormLabel className="!mt-0">Visible to students</FormLabel>
                     <p className="text-xs text-muted-foreground">When unchecked, students cannot see this company</p>
+                  </div>
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="has_mou" render={({ field }) => (
+                <FormItem className="flex items-center gap-3 rounded-lg border p-3 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <FormControl>
+                    <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                  </FormControl>
+                  <div>
+                    <FormLabel className="!mt-0 text-green-800 dark:text-green-300">Has MOU</FormLabel>
+                    <p className="text-xs text-green-700/70 dark:text-green-400/70">Company has a signed Memorandum of Understanding</p>
+                  </div>
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="is_blacklisted" render={({ field }) => (
+                <FormItem className="flex items-center gap-3 rounded-lg border p-3 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+                  <FormControl>
+                    <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                  </FormControl>
+                  <div>
+                    <FormLabel className="!mt-0 text-red-800 dark:text-red-300">Blacklisted</FormLabel>
+                    <p className="text-xs text-red-700/70 dark:text-red-400/70">Company is flagged — students will not be able to apply</p>
                   </div>
                 </FormItem>
               )} />

@@ -8,9 +8,9 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Search, Pencil, Trash2, ExternalLink, MoreHorizontal, Send, Eye, EyeOff } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, ExternalLink, MoreHorizontal, Send, Eye, EyeOff, ShieldCheck, ShieldOff, Ban, CircleCheck } from 'lucide-react'
 import { CompanyForm } from './company-form'
-import { deleteCompany, toggleCompanyVisibility } from '@/app/actions/companies'
+import { deleteCompany, toggleCompanyVisibility, toggleCompanyMOU, toggleCompanyBlacklist } from '@/app/actions/companies'
 import { toast } from 'sonner'
 import type { AppRole } from '@/lib/roles'
 import type { Company } from '@/types/database.types'
@@ -61,6 +61,18 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
     else { toast.success(!current ? 'Company visible to students' : 'Company hidden from students'); router.refresh() }
   }
 
+  const handleToggleMOU = async (id: string, current: boolean) => {
+    const result = await toggleCompanyMOU(id, !current)
+    if (result.error) toast.error(result.error)
+    else { toast.success(!current ? 'MOU added' : 'MOU removed'); router.refresh() }
+  }
+
+  const handleToggleBlacklist = async (id: string, current: boolean) => {
+    const result = await toggleCompanyBlacklist(id, !current)
+    if (result.error) toast.error(result.error)
+    else { toast.success(!current ? 'Company blacklisted' : 'Company removed from blacklist'); router.refresh() }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -100,8 +112,10 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                 const posCount = c.company_positions?.[0]?.count ?? 0
                 const appCount = c.internship_applications?.[0]?.count ?? 0
                 const isHidden = c.is_visible === false
+                const isBlacklisted = c.is_blacklisted === true
+                const hasMOU = c.has_mou === true
                 return (
-                  <TableRow key={c.id} className={isHidden ? 'opacity-50' : ''}>
+                  <TableRow key={c.id} className={isBlacklisted ? 'bg-red-50 dark:bg-red-950/20' : isHidden ? 'opacity-50' : ''}>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         {c.logo_url ? (
@@ -114,9 +128,19 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                           </div>
                         )}
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="font-medium">{c.company_name}</p>
                             {isHidden && <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                            {hasMOU && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-[10px] font-semibold px-1.5 py-0.5">
+                                <ShieldCheck className="h-2.5 w-2.5" />MOU
+                              </span>
+                            )}
+                            {isBlacklisted && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-[10px] font-semibold px-1.5 py-0.5">
+                                <Ban className="h-2.5 w-2.5" />Blacklisted
+                              </span>
+                            )}
                           </div>
                           {c.website && (
                             <a href={c.website} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
@@ -157,6 +181,21 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                               {c.is_visible === false
                                 ? <><Eye className="mr-2 h-4 w-4" />Show to students</>
                                 : <><EyeOff className="mr-2 h-4 w-4" />Hide from students</>
+                              }
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleToggleMOU(c.id, hasMOU)}>
+                              {hasMOU
+                                ? <><ShieldOff className="mr-2 h-4 w-4" />Remove MOU</>
+                                : <><ShieldCheck className="mr-2 h-4 w-4 text-green-600" />Mark as MOU</>
+                              }
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleToggleBlacklist(c.id, isBlacklisted)}
+                              className={isBlacklisted ? '' : 'text-red-600 focus:text-red-600 focus:bg-red-50'}
+                            >
+                              {isBlacklisted
+                                ? <><CircleCheck className="mr-2 h-4 w-4" />Remove from blacklist</>
+                                : <><Ban className="mr-2 h-4 w-4" />Add to blacklist</>
                               }
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />

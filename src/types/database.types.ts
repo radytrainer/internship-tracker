@@ -83,6 +83,8 @@ export interface Company {
   website: string | null
   max_students_per_company: number
   is_visible: boolean
+  has_mou: boolean
+  is_blacklisted: boolean
   notes: string | null
   created_at: string
   updated_at: string

@@ -36,8 +36,8 @@ export function roleLabel(role: UserRole | null | undefined) {
 export const dashboardNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard', roles: ['admin', 'trainer'] },
   { href: '/students', label: 'Students', icon: 'Users', roles: ['admin', 'trainer'] },
-  { href: '/companies', label: 'Companies', icon: 'Building2', roles: ['admin', 'student'] },
-  { href: '/positions', label: 'Positions', icon: 'Briefcase', roles: ['admin', 'student'] },
+  { href: '/companies', label: 'Companies', icon: 'Building2', roles: ['admin', 'trainer'] },
+  { href: '/positions', label: 'Positions', icon: 'Briefcase', roles: ['admin', 'trainer'] },
   { href: '/applications', label: 'Applications', icon: 'FileText', roles: ['admin', 'trainer', 'student'] },
   { href: '/interviews', label: 'Interviews', icon: 'MessageSquare', roles: ['admin', 'trainer', 'student'] },
   { href: '/internships', label: 'Internships', icon: 'ClipboardList', roles: ['admin', 'trainer', 'student'] },

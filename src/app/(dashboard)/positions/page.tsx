@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentProfile } from '@/lib/auth/server'
 import { PositionTable } from '@/components/positions/position-table'
@@ -5,7 +6,10 @@ import { PositionTable } from '@/components/positions/position-table'
 export const revalidate = 0
 
 export default async function PositionsPage() {
-  const [{ role }, supabase] = [await getCurrentProfile(), createAdminClient()]
+  const { role } = await getCurrentProfile()
+  if (role === 'student') redirect('/applications')
+
+  const supabase = createAdminClient()
   const [{ data: positions }, { data: companies }] = await Promise.all([
     supabase
       .from('company_positions')
