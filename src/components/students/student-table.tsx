@@ -131,12 +131,12 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Students</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} of {students.length} students</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" />Export</Button>
@@ -184,19 +184,19 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative w-full sm:flex-1 sm:min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search by name, code, email..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Statuses" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             {statuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterGender} onValueChange={setFilterGender}>
-          <SelectTrigger className="w-32"><SelectValue placeholder="Gender" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="Gender" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All</SelectItem>
             <SelectItem value="Male">Male</SelectItem>
@@ -204,7 +204,7 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
           </SelectContent>
         </Select>
         <Select value={filterGeneration} onValueChange={setFilterGeneration}>
-          <SelectTrigger className="w-44"><SelectValue placeholder="Generation" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Generation" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Generations</SelectItem>
             {generations.map(generation => <SelectItem key={generation.id} value={generation.id}>{generation.name}</SelectItem>)}
@@ -390,4 +390,5 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
     </div>
   )
 }
+
 

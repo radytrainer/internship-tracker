@@ -77,7 +77,7 @@ export function ApplicationTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">{role === 'student' ? 'My Applications' : 'Internship Applications'}</h2>
           <p className="text-sm text-muted-foreground">
@@ -93,19 +93,19 @@ export function ApplicationTable({
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative w-full sm:flex-1 sm:min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search by student or company..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Statuses" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="All Companies" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="All Companies" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Companies</SelectItem>
             {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
@@ -225,4 +225,7 @@ export function ApplicationTable({
     </div>
   )
 }
+
+
+
 

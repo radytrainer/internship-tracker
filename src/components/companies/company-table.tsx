@@ -75,7 +75,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Companies</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} partner companies</p>
@@ -85,7 +85,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search companies..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
@@ -239,4 +239,6 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
     </div>
   )
 }
+
+
 

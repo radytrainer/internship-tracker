@@ -75,7 +75,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Company Positions</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} positions available</p>
@@ -85,13 +85,13 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
         </Button>
       </div>
 
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-wrap gap-3">
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search positions..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-56"><SelectValue placeholder="All Companies" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All Companies" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Companies</SelectItem>
             {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
@@ -204,4 +204,6 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
     </div>
   )
 }
+
+
 

@@ -75,7 +75,7 @@ export function EmploymentTable({ records, students, role }: EmploymentTableProp
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">{role === 'student' ? 'My Employment Records' : 'Employment Records'}</h2>
           <p className="text-sm text-muted-foreground">{filtered.length} records</p>
@@ -88,19 +88,19 @@ export function EmploymentTable({ records, students, role }: EmploymentTableProp
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative w-full sm:flex-1 sm:min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search by student, employer, or role..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="All Statuses" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             {['Active', 'Resigned', 'Terminated'].map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="All Types" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="All Types" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
             {['Full-Time', 'Part-Time', 'Contract'].map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
@@ -220,4 +220,7 @@ export function EmploymentTable({ records, students, role }: EmploymentTableProp
     </div>
   )
 }
+
+
+
 
