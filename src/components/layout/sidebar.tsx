@@ -41,7 +41,7 @@ export function Sidebar({ collapsed, onCollapse, profile }: SidebarProps) {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          'fixed left-0 top-0 h-full z-40 flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border',
+          'fixed left-0 top-0 h-full z-40 flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 border-r border-sidebar-border hidden md:flex',
           collapsed ? 'w-16' : 'w-64'
         )}
       >

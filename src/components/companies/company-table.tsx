@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -90,7 +90,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
         <Input placeholder="Search companies..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -153,7 +153,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                     <TableCell>
                       {c.industry
                         ? <a href={c.industry} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-500 hover:underline text-sm"><Send className="h-3 w-3" />Telegram</a>
-                        : '—'}
+                        : 'â€”'}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
@@ -239,3 +239,4 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
     </div>
   )
 }
+

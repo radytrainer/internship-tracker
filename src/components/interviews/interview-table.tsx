@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -109,7 +109,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
         </Select>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -136,8 +136,8 @@ export function InterviewTable({ interviews, applications, companies, role }: In
                   </TableCell>
                   <TableCell>
                     <div>
-                      <p className="font-medium text-sm">{iv.application?.company?.company_name ?? '—'}</p>
-                      <p className="text-xs text-muted-foreground">{iv.application?.position?.position_name ?? '—'}</p>
+                      <p className="font-medium text-sm">{iv.application?.company?.company_name ?? 'â€”'}</p>
+                      <p className="text-xs text-muted-foreground">{iv.application?.position?.position_name ?? 'â€”'}</p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -159,7 +159,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
                       {iv.interview_type}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{iv.interviewer ?? '—'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{iv.interviewer ?? 'â€”'}</TableCell>
                   <TableCell>
                     <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', RESULT_COLORS[iv.result] ?? 'bg-muted text-muted-foreground')}>
                       {iv.result}
@@ -222,3 +222,4 @@ export function InterviewTable({ interviews, applications, companies, role }: In
     </div>
   )
 }
+

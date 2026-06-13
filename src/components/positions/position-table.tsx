@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -99,7 +99,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
         </Select>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -133,10 +133,10 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
                         {p.position_type ?? 'Internship'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{p.company?.company_name ?? '—'}</TableCell>
+                    <TableCell>{p.company?.company_name ?? 'â€”'}</TableCell>
                     <TableCell className="text-sm whitespace-nowrap">
                       <span className={overdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}>
-                        {fmtIntake(p.intake_date) ?? '—'}
+                        {fmtIntake(p.intake_date) ?? 'â€”'}
                       </span>
                       {overdue && <span className="ml-1.5 text-[10px] font-semibold text-red-500 uppercase tracking-wide">Overdue</span>}
                     </TableCell>
@@ -146,7 +146,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
                         {p.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{p.description ?? '—'}</TableCell>
+                    <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{p.description ?? 'â€”'}</TableCell>
                     {canManage && (
                       <TableCell>
                         <DropdownMenu>
@@ -204,3 +204,4 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -108,7 +108,7 @@ export function EmploymentTable({ records, students, role }: EmploymentTableProp
         </Select>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -148,12 +148,12 @@ export function EmploymentTable({ records, students, role }: EmploymentTableProp
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <p>{record.start_date ? formatDate(record.start_date) : '—'}</p>
-                        {record.end_date && <p className="text-muted-foreground">→ {formatDate(record.end_date)}</p>}
+                        <p>{record.start_date ? formatDate(record.start_date) : 'â€”'}</p>
+                        {record.end_date && <p className="text-muted-foreground">â†’ {formatDate(record.end_date)}</p>}
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {record.salary != null ? `${formatCurrency(record.salary)}/mo` : '—'}
+                      {record.salary != null ? `${formatCurrency(record.salary)}/mo` : 'â€”'}
                     </TableCell>
                     <TableCell>
                       <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', STATUS_COLORS[record.employment_status] ?? 'bg-muted text-muted-foreground')}>
@@ -220,3 +220,4 @@ export function EmploymentTable({ records, students, role }: EmploymentTableProp
     </div>
   )
 }
+

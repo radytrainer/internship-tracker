@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -113,7 +113,7 @@ export function ApplicationTable({
         </Select>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -146,9 +146,9 @@ export function ApplicationTable({
                         </div>
                       </TableCell>
                     )}
-                    <TableCell className="font-medium">{a.company?.company_name ?? '—'}</TableCell>
+                    <TableCell className="font-medium">{a.company?.company_name ?? 'â€”'}</TableCell>
                     <TableCell className="text-sm">
-                      {a.position?.position_name ?? '—'}
+                      {a.position?.position_name ?? 'â€”'}
                       {(a.position as any)?.intake_date && (
                         <span className="block text-xs text-muted-foreground">
                           {new Date((a.position as any).intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
@@ -225,3 +225,4 @@ export function ApplicationTable({
     </div>
   )
 }
+
