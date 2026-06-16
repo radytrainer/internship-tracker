@@ -61,27 +61,41 @@ function CompanyCard({ company, rank, mode, onClick }: {
   const isAvailableMode = mode === 'available'
   const metric = isAvailableMode ? company.total_remaining : company.total_applications
   const metricLabel = isAvailableMode ? 'remaining' : 'applied'
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const hasOverduePosition = company.positions.some(
+    (p: AnyRecord) => p.intake_date && new Date(p.intake_date) < today
+  )
+
   const accentColor = isAvailableMode
-    ? 'text-emerald-700'
+    ? (hasOverduePosition ? 'text-red-700' : 'text-emerald-700')
     : (company.isFull ? 'text-red-600' : 'text-blue-700')
   const accentSub = isAvailableMode
-    ? 'text-emerald-500'
+    ? (hasOverduePosition ? 'text-red-400' : 'text-emerald-500')
     : (company.isFull ? 'text-red-400' : 'text-blue-500')
+
+  const cardBorder = isAvailableMode
+    ? (hasOverduePosition
+        ? 'border-2 border-red-400 ring-2 ring-red-100 bg-red-50/40'
+        : 'border border-emerald-200 hover:border-emerald-400')
+    : (!isAvailableMode && company.isFull
+        ? 'border-2 border-red-400 ring-2 ring-red-100'
+        : 'border border-gray-200 hover:border-blue-200')
 
   return (
     <button
       onClick={onClick}
-      className={`relative group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 text-left p-5 space-y-3 ${
-        !isAvailableMode && company.isFull
-          ? 'border-2 border-red-400 ring-2 ring-red-100'
-          : isAvailableMode
-          ? 'border border-emerald-200 hover:border-emerald-400'
-          : 'border border-gray-200 hover:border-blue-200'
-      }`}
+      className={`relative group bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 text-left p-5 space-y-3 ${cardBorder}`}
     >
       {!isAvailableMode && company.isFull && (
         <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full z-10">
           FULL
+        </span>
+      )}
+      {isAvailableMode && hasOverduePosition && (
+        <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full z-10">
+          OVERDUE
         </span>
       )}
 
@@ -122,11 +136,12 @@ function CompanyCard({ company, rank, mode, onClick }: {
           {company.positions.slice(0, 4).map((p: AnyRecord) => {
             const positionFull = p.application_count >= p.max_students * 2
             const remaining = Math.max(0, p.max_students * 2 - p.application_count)
+            const isOverdue = p.intake_date && new Date(p.intake_date) < today
             return (
-              <div key={p.id} className="flex items-center justify-between text-sm gap-2">
-                <span className="text-gray-700 truncate flex-1">
+              <div key={p.id} className={`flex items-center justify-between text-sm gap-2 rounded px-1 ${isOverdue ? 'bg-red-50' : ''}`}>
+                <span className={`truncate flex-1 ${isOverdue ? 'text-red-700' : 'text-gray-700'}`}>
                   {p.position_name}
-                  {p.intake_date && <span className="text-xs text-muted-foreground ml-1">({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})</span>}
+                  {p.intake_date && <span className={`text-xs ml-1 ${isOverdue ? 'text-red-400 font-semibold' : 'text-muted-foreground'}`}>({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})</span>}
                 </span>
                 <span className="text-xs text-muted-foreground shrink-0">needs {p.max_students}</span>
                 {isAvailableMode ? (
