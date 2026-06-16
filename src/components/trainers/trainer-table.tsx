@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, GraduationCap, UserCheck } from 'lucide-react'
+import { Plus, MoreHorizontal, Pencil, Trash2, GraduationCap, UserCheck } from 'lucide-react'
 import { createTrainer, updateTrainer, deleteTrainer } from '@/app/actions/trainers'
 import { assignTrainerToClass } from '@/app/actions/trainer-classes'
 import { toast } from 'sonner'
@@ -148,7 +149,6 @@ export function TrainerTable({ trainers, classes }: TrainerTableProps) {
   }
 
   const handleClassAssign = async (classId: string, trainerId: string, currentTrainerId: string | null) => {
-    // If this class already belongs to this trainer, unassign; otherwise assign
     const newTrainerId = currentTrainerId === trainerId ? null : trainerId
     setAssigningClass(prev => ({ ...prev, [classId]: true }))
     const result = await assignTrainerToClass(classId, newTrainerId)
@@ -159,9 +159,6 @@ export function TrainerTable({ trainers, classes }: TrainerTableProps) {
 
   const getAssignedClasses = (trainerId: string) =>
     classes.filter((c: AnyRecord) => c.trainer_id === trainerId)
-
-  const unassignedClasses = (trainerId: string) =>
-    classes.filter((c: AnyRecord) => !c.trainer_id || c.trainer_id === trainerId)
 
   return (
     <div className="space-y-4">
@@ -183,7 +180,7 @@ export function TrainerTable({ trainers, classes }: TrainerTableProps) {
               <TableHead>Email</TableHead>
               <TableHead>Assigned Classes</TableHead>
               <TableHead>Add Class</TableHead>
-              <TableHead className="w-20"></TableHead>
+              <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -252,19 +249,27 @@ export function TrainerTable({ trainers, classes }: TrainerTableProps) {
                     </TableCell>
 
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditTarget(trainer)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(trainer)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditTarget(trainer)}>
+                            <Pencil className="mr-2 h-3.5 w-3.5" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeleteTarget(trainer)}
+                          >
+                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 )
