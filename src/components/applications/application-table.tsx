@@ -42,8 +42,10 @@ export function ApplicationTable({
   const [deleteTarget, setDeleteTarget] = useState<InternshipApplication | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const canManage = role !== 'trainer'
+  const canManage = role === 'admin'
   const showStudentColumn = role !== 'student'
+  const pageTitle = showStudentColumn ? 'Internship Applications' : 'My Applications'
+  const pageSubtitle = showStudentColumn ? 'applications' : 'records in your tracker'
 
   const filtered = useMemo(() => applications.filter(a => {
     const app = a as InternshipApplication & {
@@ -79,22 +81,14 @@ export function ApplicationTable({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold">{role === 'student' ? 'My Applications' : 'Internship Applications'}</h2>
+          <h2 className="text-xl font-bold">{pageTitle}</h2>
           <p className="text-sm text-muted-foreground">
-            {filtered.length} {role === 'student' ? 'records in your tracker' : 'applications'}
+            {filtered.length} {pageSubtitle}
           </p>
         </div>
         {canManage && (
-          <Button size="sm" onClick={() => {
-            if (role === 'student' && !currentStudentId) {
-              toast.error('Your account is not linked to a student record. Please contact your administrator.')
-              return
-            }
-            setEditApp(null)
-            setFormOpen(true)
-          }}>
-            <Plus className="mr-2 h-4 w-4" />
-            {role === 'student' ? 'Add My Application' : 'New Application'}
+          <Button size="sm" onClick={() => { setEditApp(null); setFormOpen(true) }}>
+            <Plus className="mr-2 h-4 w-4" />New Application
           </Button>
         )}
       </div>
@@ -204,10 +198,8 @@ export function ApplicationTable({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Application</AlertDialogTitle>
             <AlertDialogDescription>
-              {role === 'student'
-                ? 'Delete this application from your tracker?'
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                : `Delete this application from ${(deleteTarget as any)?.student?.first_name} ${(deleteTarget as any)?.student?.last_name}?`}
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              Delete this application from {(deleteTarget as any)?.student?.first_name} {(deleteTarget as any)?.student?.last_name}?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -48,7 +48,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
   const [deleting, setDeleting] = useState(false)
 
   const canManage = role === 'admin'
-  const canSchedule = true
+  const canSchedule = role !== 'student'
   const showStudentColumn = role !== 'student'
 
   const filtered = useMemo(() => interviews.filter((iv: AnyRecord) => {
