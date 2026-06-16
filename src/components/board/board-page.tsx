@@ -136,12 +136,23 @@ function CompanyCard({ company, rank, mode, onClick }: {
           {company.positions.slice(0, 4).map((p: AnyRecord) => {
             const positionFull = p.application_count >= p.max_students * 2
             const remaining = Math.max(0, p.max_students * 2 - p.application_count)
-            const isOverdue = p.intake_date && new Date(p.intake_date) < today
+            const isOverdue = !!p.intake_date && new Date(p.intake_date) < today
             return (
-              <div key={p.id} className={`flex items-center justify-between text-sm gap-2 rounded px-1 ${isOverdue ? 'bg-red-50' : ''}`}>
-                <span className={`truncate flex-1 ${isOverdue ? 'text-red-700' : 'text-gray-700'}`}>
+              <div
+                key={p.id}
+                className="flex items-center justify-between text-sm gap-2 rounded px-1"
+                style={isOverdue ? { backgroundColor: '#fff1f2' } : {}}
+              >
+                <span className="truncate flex-1" style={isOverdue ? { color: '#b91c1c' } : { color: '#374151' }}>
                   {p.position_name}
-                  {p.intake_date && <span className={`text-xs ml-1 ${isOverdue ? 'text-red-400 font-semibold' : 'text-muted-foreground'}`}>({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})</span>}
+                  {p.intake_date && (
+                    <span
+                      className="text-xs ml-1"
+                      style={isOverdue ? { color: '#ef4444', fontWeight: 600 } : { color: 'var(--muted-foreground)' }}
+                    >
+                      ({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})
+                    </span>
+                  )}
                 </span>
                 <span className="text-xs text-muted-foreground shrink-0">needs {p.max_students}</span>
                 {isAvailableMode ? (
@@ -334,42 +345,51 @@ export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) 
               <div className="px-6 pt-4 pb-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Positions</p>
                 <div className="flex flex-wrap gap-2">
-                  {selected.positions.map((p: AnyRecord) => {
-                    const positionFull = p.application_count >= p.max_students * 2
-                    const remaining = Math.max(0, p.max_students * 2 - p.application_count)
-                    const sheetToday = new Date(); sheetToday.setHours(0,0,0,0)
-                    const isExpired = p.intake_date && new Date(p.intake_date) < sheetToday
-                    return (
-                      <div key={p.id} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm border ${
-                        isExpired
-                          ? 'bg-red-50 border-red-200'
-                          : positionFull
-                          ? 'bg-red-50 border-transparent'
-                          : 'bg-muted border-transparent'
-                      }`}>
-                        <span className={`font-medium ${isExpired ? 'text-red-700' : ''}`}>
-                          {p.position_name}
-                          {p.intake_date && (
-                            <span className={`text-xs font-normal ml-1 ${isExpired ? 'text-red-400' : 'text-muted-foreground'}`}>
-                              ({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})
+                  {(() => {
+                    const now = new Date()
+                    now.setHours(0, 0, 0, 0)
+                    return selected.positions.map((p: AnyRecord) => {
+                      const positionFull = p.application_count >= p.max_students * 2
+                      const remaining = Math.max(0, p.max_students * 2 - p.application_count)
+                      const isExpired = !!p.intake_date && new Date(p.intake_date) < now
+                      return (
+                        <div
+                          key={p.id}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ${positionFull && !isExpired ? 'bg-red-50' : !isExpired ? 'bg-muted' : ''}`}
+                          style={isExpired ? { backgroundColor: '#fff1f2', border: '1.5px solid #fca5a5' } : {}}
+                        >
+                          <span
+                            className="font-medium"
+                            style={isExpired ? { color: '#b91c1c' } : {}}
+                          >
+                            {p.position_name}
+                            {p.intake_date && (
+                              <span
+                                className="text-xs font-normal ml-1"
+                                style={isExpired ? { color: '#ef4444' } : { color: 'var(--muted-foreground)' }}
+                              >
+                                ({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})
+                              </span>
+                            )}
+                          </span>
+                          {isExpired && (
+                            <span style={{ fontSize: '11px', fontWeight: 600, background: '#fee2e2', color: '#dc2626', borderRadius: '4px', padding: '1px 6px' }}>
+                              Expired
                             </span>
                           )}
-                        </span>
-                        {isExpired && (
-                          <span className="text-xs font-semibold bg-red-100 text-red-600 rounded px-1.5 py-0.5">Expired</span>
-                        )}
-                        <Badge variant="outline" className="text-xs">needs {p.max_students}</Badge>
-                        <Badge variant={positionFull ? 'destructive' : 'secondary'} className="text-xs">
-                          {p.application_count}/{p.max_students * 2} applied
-                        </Badge>
-                        {!positionFull && (
-                          <Badge className="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                            {remaining} left
+                          <Badge variant="outline" className="text-xs">needs {p.max_students}</Badge>
+                          <Badge variant={positionFull ? 'destructive' : 'secondary'} className="text-xs">
+                            {p.application_count}/{p.max_students * 2} applied
                           </Badge>
-                        )}
-                      </div>
-                    )
-                  })}
+                          {!positionFull && (
+                            <Badge className="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                              {remaining} left
+                            </Badge>
+                          )}
+                        </div>
+                      )
+                    })
+                  })()}
                 </div>
               </div>
 
