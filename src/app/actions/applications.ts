@@ -22,9 +22,7 @@ export type ApplicationFormData = z.infer<typeof applicationSchema>
 async function authorizeApplicationWrite(studentId?: string) {
   const { role, profile } = await getCurrentProfile()
 
-  if (role === 'trainer' || !role) {
-    return { success: false, error: 'You do not have permission to change applications.' }
-  }
+  if (!role) return { success: false, error: 'Not authenticated.' }
 
   if (role === 'student') {
     if (!profile?.student_id) return { success: false, error: 'Your account is not linked to a student record.' }
@@ -34,6 +32,7 @@ async function authorizeApplicationWrite(studentId?: string) {
     return { role, studentId: profile.student_id }
   }
 
+  // admin and trainer can manage applications
   return { role, studentId: studentId ?? profile?.student_id ?? null }
 }
 

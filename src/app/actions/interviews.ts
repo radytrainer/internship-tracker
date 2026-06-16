@@ -1,7 +1,7 @@
-'use server'
+﻿'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdmin, getCurrentProfile } from '@/lib/auth/server'
+import { requireAdminOrTrainer, getCurrentProfile } from '@/lib/auth/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -20,7 +20,7 @@ export type InterviewFormData = z.infer<typeof interviewSchema>
 
 export async function createInterview(data: InterviewFormData) {
   const { role, profile } = await getCurrentProfile()
-  if (!role || role === 'trainer') return { success: false, error: 'Permission denied.' }
+  if (!role) return { success: false, error: 'Permission denied.' }
 
   const supabase = createAdminClient()
   const parsed = interviewSchema.safeParse(data)
@@ -63,7 +63,7 @@ export async function createInterview(data: InterviewFormData) {
 }
 
 export async function updateInterview(id: string, data: Partial<InterviewFormData>) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrTrainer()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('interviews').update(data).eq('id', id)
@@ -87,7 +87,7 @@ export async function updateInterview(id: string, data: Partial<InterviewFormDat
 }
 
 export async function deleteInterview(id: string) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrTrainer()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('interviews').delete().eq('id', id)

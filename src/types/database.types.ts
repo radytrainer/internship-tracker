@@ -48,9 +48,11 @@ export interface Class {
   id: string
   name: string
   generation_id: string | null
+  trainer_id: string | null
   created_at: string
   // joined
   generation?: Generation
+  trainer?: Profile
 }
 
 export interface Student {

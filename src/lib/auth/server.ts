@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeRole, type AppRole } from '@/lib/roles'
 import type { Profile, UserRole } from '@/types/database.types'
 
@@ -31,8 +32,25 @@ export async function requireAdmin() {
   return context
 }
 
+export async function requireAdminOrTrainer() {
+  const context = await getCurrentProfile()
+  if (context.role !== 'admin' && context.role !== 'trainer') {
+    return { error: 'You do not have permission to perform this action.' }
+  }
+  return context
+}
+
 export async function requireAdminOrStudent() {
   const context = await getCurrentProfile()
   if (!context.role || context.role === 'trainer') return { error: 'You do not have permission.' }
   return context
+}
+
+export async function getTrainerClassIds(profileId: string): Promise<string[]> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('classes')
+    .select('id')
+    .eq('trainer_id', profileId)
+  return (data ?? []).map((c: { id: string }) => c.id)
 }
