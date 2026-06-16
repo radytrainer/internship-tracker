@@ -153,7 +153,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                     <TableCell>
                       {c.industry
                         ? <a href={c.industry} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-500 hover:underline text-sm"><Send className="h-3 w-3" />Telegram</a>
-                        : <span className=”text-muted-foreground”>—</span>}
+                        : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
