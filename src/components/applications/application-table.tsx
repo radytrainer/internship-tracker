@@ -85,7 +85,14 @@ export function ApplicationTable({
           </p>
         </div>
         {canManage && (
-          <Button size="sm" onClick={() => { setEditApp(null); setFormOpen(true) }}>
+          <Button size="sm" onClick={() => {
+            if (role === 'student' && !currentStudentId) {
+              toast.error('Your account is not linked to a student record. Please contact your administrator.')
+              return
+            }
+            setEditApp(null)
+            setFormOpen(true)
+          }}>
             <Plus className="mr-2 h-4 w-4" />
             {role === 'student' ? 'Add My Application' : 'New Application'}
           </Button>

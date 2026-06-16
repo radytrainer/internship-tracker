@@ -48,7 +48,8 @@ export function InterviewTable({ interviews, applications, companies, role }: In
   const [deleting, setDeleting] = useState(false)
 
   const canManage = role === 'admin'
-  const canSchedule = role === 'admin' || role === 'student'
+  const canSchedule = true
+  const showStudentColumn = role !== 'student'
 
   const filtered = useMemo(() => interviews.filter((iv: AnyRecord) => {
     const q = search.toLowerCase()
@@ -72,7 +73,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const colSpan = canManage ? 7 : 6
+  const colSpan = (showStudentColumn ? 1 : 0) + 5 + (canManage ? 1 : 0)
 
   return (
     <div className="space-y-4">
@@ -113,7 +114,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student</TableHead>
+              {showStudentColumn && <TableHead>Student</TableHead>}
               <TableHead>Company / Position</TableHead>
               <TableHead>Date & Time</TableHead>
               <TableHead>Type</TableHead>
@@ -128,12 +129,14 @@ export function InterviewTable({ interviews, applications, companies, role }: In
             ) : (
               filtered.map((iv: AnyRecord) => (
                 <TableRow key={iv.id} className={iv.interview_date === today ? 'bg-yellow-50/50 dark:bg-yellow-900/10' : ''}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{iv.application?.student?.first_name} {iv.application?.student?.last_name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{iv.application?.student?.student_code}</p>
-                    </div>
-                  </TableCell>
+                  {showStudentColumn && (
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{iv.application?.student?.first_name} {iv.application?.student?.last_name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{iv.application?.student?.student_code}</p>
+                      </div>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div>
                       <p className="font-medium text-sm">{iv.application?.company?.company_name ?? 'â€”'}</p>

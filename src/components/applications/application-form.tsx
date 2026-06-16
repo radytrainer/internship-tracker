@@ -18,7 +18,7 @@ import type { AppRole } from '@/lib/roles'
 import type { InternshipApplication } from '@/types/database.types'
 
 const schema = z.object({
-  student_id: z.string().uuid('Select a student'),
+  student_id: z.string().min(1, 'Select a student'),
   company_id: z.string().uuid('Select a company'),
   position_id: z.string().uuid('Select a position'),
   application_date: z.string(),
