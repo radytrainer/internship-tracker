@@ -42,8 +42,8 @@ export const dashboardNavItems: NavItem[] = [
   { href: '/positions', label: 'Positions', icon: 'Briefcase', roles: ['admin', 'trainer'] },
   { href: '/applications', label: 'Applications', icon: 'FileText', roles: ['admin', 'trainer', 'student'] },
   { href: '/interviews', label: 'Interviews', icon: 'MessageSquare', roles: ['admin', 'trainer', 'student'] },
-  { href: '/internships', label: 'Internships', icon: 'ClipboardList', roles: ['admin', 'trainer'] },
-  { href: '/employment', label: 'Employment', icon: 'Award', roles: ['admin', 'trainer'] },
+  { href: '/internships', label: 'Internships', icon: 'ClipboardList', roles: ['admin', 'trainer', 'student'] },
+  { href: '/employment', label: 'Employment', icon: 'Award', roles: ['admin', 'trainer', 'student'] },
   { href: '/reports', label: 'Reports', icon: 'BarChart3', roles: ['admin', 'trainer'] },
   { href: '/settings', label: 'Settings', icon: 'Settings', roles: ['admin', 'trainer'] },
 ]

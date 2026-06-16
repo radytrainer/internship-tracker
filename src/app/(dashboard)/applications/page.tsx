@@ -17,6 +17,9 @@ export default async function ApplicationsPage() {
       .select('id')
       .in('class_id', classIds.length > 0 ? classIds : ['00000000-0000-0000-0000-000000000000'])
     allowedStudentIds = (classStudents ?? []).map(s => s.id)
+  } else if (role === 'student') {
+    // Students see only their own record
+    allowedStudentIds = profile?.student_id ? [profile.student_id] : []
   }
 
   const studentFilter = allowedStudentIds !== null

@@ -17,6 +17,8 @@ export default async function InterviewsPage() {
       .select('id')
       .in('class_id', classIds.length > 0 ? classIds : ['00000000-0000-0000-0000-000000000000'])
     allowedStudentIds = (classStudents ?? []).map(s => s.id)
+  } else if (role === 'student') {
+    allowedStudentIds = profile?.student_id ? [profile.student_id] : []
   }
 
   const studentFilter = allowedStudentIds !== null
@@ -53,18 +55,11 @@ export default async function InterviewsPage() {
     )
   }
 
-  // Students only see their own applications in the schedule form
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allApps = (applications ?? []) as any[]
-  const visibleApps = role === 'student' && profile?.student_id
-    ? allApps.filter(a => a.student_id === profile.student_id)
-    : allApps
-
   return (
     <InterviewTable
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       interviews={filteredInterviews as any[]}
-      applications={visibleApps}
+      applications={applications ?? []}
       companies={companies ?? []}
       role={role ?? 'admin'}
     />
