@@ -15,7 +15,7 @@ import type { Profile } from '@/types/database.types'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import Link from 'next/link'
 import {
-  GraduationCap, LayoutDashboard, Users, Building2, Briefcase,
+  GraduationCap, LayoutDashboard, Users, UserCheck, Building2, Briefcase,
   FileText, MessageSquare, ClipboardList, Award, BarChart3, Settings
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,11 +32,13 @@ const PAGE_TITLES: Record<string, string> = {
   '/employment': 'Employment Records',
   '/reports': 'Reports & Analytics',
   '/settings': 'Settings',
+  '/trainers': 'Trainers',
 }
 
 const iconMap = {
   LayoutDashboard,
   Users,
+  UserCheck,
   Building2,
   Briefcase,
   FileText,

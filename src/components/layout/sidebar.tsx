@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  GraduationCap, LayoutDashboard, Users, Building2,
+  GraduationCap, LayoutDashboard, Users, UserCheck, Building2,
   Briefcase, FileText, MessageSquare, ClipboardList,
   Award, BarChart3, Settings, ChevronLeft, ChevronRight
 } from 'lucide-react'
@@ -18,6 +18,7 @@ import type { Profile } from '@/types/database.types'
 const iconMap = {
   LayoutDashboard,
   Users,
+  UserCheck,
   Building2,
   Briefcase,
   FileText,
