@@ -6,27 +6,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { GraduationCap, Building2, Globe, Mail, Phone, MapPin, LogIn, ChevronRight, TrendingUp, Sparkles } from 'lucide-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = any
-
-const STATUS_COLORS: Record<string, string> = {
-  'Applied':            'bg-blue-100 text-blue-700',
-  'Under Review':       'bg-yellow-100 text-yellow-700',
-  'Interview Scheduled':'bg-purple-100 text-purple-700',
-  'Interview Passed':   'bg-emerald-100 text-emerald-700',
-  'Interview Failed':   'bg-red-100 text-red-700',
-  'Accepted':           'bg-green-100 text-green-700',
-  'Rejected':           'bg-gray-100 text-gray-600',
-}
-
-const RESULT_COLORS: Record<string, string> = {
-  'Pending': 'bg-yellow-100 text-yellow-700',
-  'Passed':  'bg-green-100 text-green-700',
-  'Failed':  'bg-red-100 text-red-700',
-}
 
 function avatarColor(name: string) {
   const colors = [
@@ -40,11 +23,6 @@ function avatarColor(name: string) {
 
 function initials(name: string) {
   return name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase()).join('')
-}
-
-function fmt(d: string | null | undefined) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 interface BoardPageProps {
@@ -342,7 +320,7 @@ export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) 
                 </div>
               </SheetHeader>
 
-              <div className="px-6 pt-4 pb-2">
+              <div className="px-6 pt-4 pb-6 overflow-auto">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Positions</p>
                 <div className="flex flex-wrap gap-2">
                   {(() => {
@@ -387,74 +365,6 @@ export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) 
                       )
                     })
                   })()}
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-auto px-6 pb-6">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 mt-4">
-                  All Applications ({selected.applications.length})
-                </p>
-                <div className="rounded-lg border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="text-xs">Student</TableHead>
-                        <TableHead className="text-xs">Position</TableHead>
-                        <TableHead className="text-xs">Applied</TableHead>
-                        <TableHead className="text-xs">Status</TableHead>
-                        <TableHead className="text-xs">Interview</TableHead>
-                        <TableHead className="text-xs">Result</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selected.applications.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8 text-sm">
-                            No applications yet
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        selected.applications.map((app: AnyRecord) => (
-                          <TableRow key={app.id}>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {app.student ? `${app.student.first_name} ${app.student.last_name}` : '—'}
-                                </p>
-                                {app.student?.student_code && (
-                                  <p className="text-xs font-mono text-muted-foreground">{app.student.student_code}</p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {app.position?.position_name ?? '—'}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                              {fmt(app.application_date)}
-                            </TableCell>
-                            <TableCell>
-                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[app.application_status] ?? 'bg-gray-100 text-gray-600'}`}>
-                                {app.application_status}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                              {app.interview ? fmt(app.interview.interview_date) : '—'}
-                              {app.interview?.interview_type && (
-                                <p className="text-xs opacity-70">{app.interview.interview_type}</p>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {app.interview ? (
-                                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${RESULT_COLORS[app.interview.result] ?? 'bg-gray-100 text-gray-600'}`}>
-                                  {app.interview.result}
-                                </span>
-                              ) : '—'}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
                 </div>
               </div>
             </>
