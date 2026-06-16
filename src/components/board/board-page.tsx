@@ -337,12 +337,27 @@ export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) 
                   {selected.positions.map((p: AnyRecord) => {
                     const positionFull = p.application_count >= p.max_students * 2
                     const remaining = Math.max(0, p.max_students * 2 - p.application_count)
+                    const sheetToday = new Date(); sheetToday.setHours(0,0,0,0)
+                    const isExpired = p.intake_date && new Date(p.intake_date) < sheetToday
                     return (
-                      <div key={p.id} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ${positionFull ? 'bg-red-50' : 'bg-muted'}`}>
-                        <span className="font-medium">
+                      <div key={p.id} className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm border ${
+                        isExpired
+                          ? 'bg-red-50 border-red-200'
+                          : positionFull
+                          ? 'bg-red-50 border-transparent'
+                          : 'bg-muted border-transparent'
+                      }`}>
+                        <span className={`font-medium ${isExpired ? 'text-red-700' : ''}`}>
                           {p.position_name}
-                          {p.intake_date && <span className="text-xs font-normal text-muted-foreground ml-1">({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})</span>}
+                          {p.intake_date && (
+                            <span className={`text-xs font-normal ml-1 ${isExpired ? 'text-red-400' : 'text-muted-foreground'}`}>
+                              ({new Date(p.intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })})
+                            </span>
+                          )}
                         </span>
+                        {isExpired && (
+                          <span className="text-xs font-semibold bg-red-100 text-red-600 rounded px-1.5 py-0.5">Expired</span>
+                        )}
                         <Badge variant="outline" className="text-xs">needs {p.max_students}</Badge>
                         <Badge variant={positionFull ? 'destructive' : 'secondary'} className="text-xs">
                           {p.application_count}/{p.max_students * 2} applied
