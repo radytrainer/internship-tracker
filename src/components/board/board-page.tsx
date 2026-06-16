@@ -378,9 +378,6 @@ export function BoardPage({ topCompanies, availableCompanies }: BoardPageProps) 
                             </span>
                           )}
                           <Badge variant="outline" className="text-xs">needs {p.max_students}</Badge>
-                          <Badge variant={positionFull ? 'destructive' : 'secondary'} className="text-xs">
-                            {p.application_count}/{p.max_students * 2} applied
-                          </Badge>
                           {!positionFull && (
                             <Badge className="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                               {remaining} left
