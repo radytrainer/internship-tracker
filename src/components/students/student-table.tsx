@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Pencil, Trash2, Download, Upload, MoreHorizontal, MoreVertical, UserPlus, Users, Eye } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download, Upload, MoreHorizontal, MoreVertical, UserPlus, Users, Eye, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +30,8 @@ function avatarColor(name: string) {
 function initials(first: string, last: string) {
   return `${first[0] ?? ''}${last[0] ?? ''}`.toUpperCase()
 }
+
+const PASSED_STATUSES = new Set(['Internship Completed', 'Employed'])
 
 interface StudentTableProps {
   students: Student[]
@@ -134,7 +136,10 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">Students</h2>
-          <p className="text-sm text-muted-foreground">{filtered.length} of {students.length} students</p>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+            {filtered.length} of {students.length} students
+            <span className="inline-flex items-center gap-1 ml-2"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />completed internship or employed</span>
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <DropdownMenu>
@@ -236,8 +241,9 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
             ) : (
               filtered.map(student => {
                 const enrichedStudent = student as Student & { class?: { name: string }; generation?: { name: string } }
+                const hasPassed = PASSED_STATUSES.has(enrichedStudent.status)
                 return (
-                  <TableRow key={enrichedStudent.id}>
+                  <TableRow key={enrichedStudent.id} className={hasPassed ? 'bg-emerald-50 dark:bg-emerald-950/20' : ''}>
                     <TableCell className="font-mono text-xs font-semibold text-muted-foreground">{enrichedStudent.student_code}</TableCell>
                     <TableCell>
                       <button
@@ -254,7 +260,10 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
                           </div>
                         )}
                         <div>
-                          <p className="font-medium">{enrichedStudent.first_name} {enrichedStudent.last_name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium">{enrichedStudent.first_name} {enrichedStudent.last_name}</p>
+                            {hasPassed && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
+                          </div>
                           {enrichedStudent.email && <p className="text-xs text-muted-foreground">{enrichedStudent.email}</p>}
                         </div>
                       </button>
