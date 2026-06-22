@@ -1,6 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type UserRole = 'admin' | 'career_staff' | 'trainer' | 'student' | 'education_team'
+export type UserRole = 'admin' | 'career_staff' | 'trainer' | 'student' | 'education_team' | 'ero_team'
 export type Gender = 'Male' | 'Female'
 export type StudentStatus =
   | 'Studying'
@@ -49,10 +49,12 @@ export interface Class {
   name: string
   generation_id: string | null
   trainer_id: string | null
+  education_staff_id: string | null
   created_at: string
   // joined
   generation?: Generation
   trainer?: Profile
+  education_staff?: Profile
 }
 
 export interface Student {

@@ -17,7 +17,7 @@ import Link from 'next/link'
 import {
   GraduationCap, LayoutDashboard, Users, UserCheck, Building2, Briefcase,
   FileText, MessageSquare, ClipboardList, Award, BarChart3, Settings,
-  CalendarOff, Wallet, UserCog
+  CalendarOff, Wallet, UserCog, ShieldCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavItemsForRole, roleLabel } from '@/lib/roles'
@@ -35,6 +35,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/settings': 'Settings',
   '/trainers': 'Trainers',
   '/education-team': 'Education Team',
+  '/ero-team': 'ERO Team',
   '/leaves': 'Leave Requests',
   '/payments': 'Allowance Payments',
 }
@@ -54,6 +55,7 @@ const iconMap = {
   CalendarOff,
   Wallet,
   UserCog,
+  ShieldCheck,
 }
 
 interface HeaderProps {

@@ -62,3 +62,12 @@ export async function getTrainerClassIds(profileId: string): Promise<string[]> {
     .eq('trainer_id', profileId)
   return (data ?? []).map((c: { id: string }) => c.id)
 }
+
+export async function getEducationStaffClassIds(profileId: string): Promise<string[]> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('classes')
+    .select('id')
+    .eq('education_staff_id', profileId)
+  return (data ?? []).map((c: { id: string }) => c.id)
+}

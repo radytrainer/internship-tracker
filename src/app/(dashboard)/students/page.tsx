@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentProfile, getTrainerClassIds } from '@/lib/auth/server'
+import { getCurrentProfile, getTrainerClassIds, getEducationStaffClassIds } from '@/lib/auth/server'
 import { StudentTable } from '@/components/students/student-table'
 
 export const revalidate = 0
@@ -15,6 +15,11 @@ export default async function StudentsPage() {
 
   if (role === 'trainer' && profile) {
     const classIds = await getTrainerClassIds(profile.id)
+    studentsQuery = studentsQuery.in('class_id', classIds.length > 0 ? classIds : ['00000000-0000-0000-0000-000000000000'])
+  }
+
+  if (role === 'education_team' && profile) {
+    const classIds = await getEducationStaffClassIds(profile.id)
     studentsQuery = studentsQuery.in('class_id', classIds.length > 0 ? classIds : ['00000000-0000-0000-0000-000000000000'])
   }
 

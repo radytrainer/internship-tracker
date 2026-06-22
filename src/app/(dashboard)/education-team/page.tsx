@@ -11,11 +11,17 @@ export default async function EducationTeamPage() {
 
   const admin = createAdminClient()
 
-  const { data: staff } = await admin
-    .from('profiles')
-    .select('id, full_name, email, created_at')
-    .eq('role', 'education_team')
-    .order('full_name')
+  const [{ data: staff }, { data: classes }] = await Promise.all([
+    admin
+      .from('profiles')
+      .select('id, full_name, email, created_at')
+      .eq('role', 'education_team')
+      .order('full_name'),
+    admin
+      .from('classes')
+      .select('id, name, education_staff_id, generation:generations(name, year)')
+      .order('name'),
+  ])
 
-  return <EducationTeamTable staff={staff ?? []} />
+  return <EducationTeamTable staff={staff ?? []} classes={classes ?? []} />
 }

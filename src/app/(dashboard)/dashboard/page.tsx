@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentProfile } from '@/lib/auth/server'
 import { KPICards } from '@/components/dashboard/kpi-cards'
@@ -9,8 +8,8 @@ import { CompanyPerformance } from '@/components/dashboard/company-performance'
 import { AllowanceSalaryChart } from '@/components/dashboard/allowance-salary-chart'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, formatDate, STUDENT_STATUS_COLORS, APPLICATION_STATUS_COLORS } from '@/lib/utils'
-import { AlertTriangle, ArrowUpRight, Briefcase, Building2, CalendarDays, Clock, FileText, MessageSquare, UserRound } from 'lucide-react'
+import { formatCurrency, formatDate, STUDENT_STATUS_COLORS, APPLICATION_STATUS_COLORS, LEAVE_STATUS_COLORS } from '@/lib/utils'
+import { AlertTriangle, ArrowUpRight, Briefcase, Building2, CalendarDays, Clock, FileText, MessageSquare, UserRound, CalendarOff, Wallet, CheckCircle2 } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -18,7 +17,95 @@ export default async function DashboardPage() {
   const supabase = await createClient()
   const { role, profile } = await getCurrentProfile()
 
-  if (role === 'education_team') redirect('/leaves')
+  if (role === 'education_team') {
+    const [{ data: leavesRaw }, { data: paymentsRaw }] = await Promise.all([
+      supabase
+        .from('student_leaves')
+        .select('id, status, start_date, end_date, created_at, student:students(first_name, last_name, student_code)')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('allowance_payments')
+        .select('id, amount, payment_date, student:students(first_name, last_name, student_code)')
+        .order('payment_date', { ascending: false }),
+    ])
+
+    const leaves = leavesRaw ?? []
+    const payments = paymentsRaw ?? []
+
+    const pendingLeaves = leaves.filter(l => l.status === 'Pending').length
+    const approvedLeaves = leaves.filter(l => l.status === 'Approved').length
+    const rejectedLeaves = leaves.filter(l => l.status === 'Rejected').length
+
+    const now = new Date()
+    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const paymentsThisMonth = payments.filter(p => p.payment_date?.startsWith(thisMonthKey))
+    const totalThisMonth = paymentsThisMonth.reduce((sum, p) => sum + Number(p.amount), 0)
+    const totalAllTime = payments.reduce((sum, p) => sum + Number(p.amount), 0)
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatBox label="Pending Leave Requests" value={pendingLeaves} color="text-yellow-600" bg="bg-yellow-50 dark:bg-yellow-950/30" icon={CalendarOff} />
+          <StatBox label="Approved Leaves" value={approvedLeaves} color="text-green-600" bg="bg-green-50 dark:bg-green-950/30" icon={CheckCircle2} />
+          <StatBox label="Rejected Leaves" value={rejectedLeaves} color="text-red-600" bg="bg-red-50 dark:bg-red-950/30" icon={AlertTriangle} />
+          <StatBox label="Total Leave Requests" value={leaves.length} color="text-slate-600" bg="bg-slate-50 dark:bg-slate-900/30" icon={FileText} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <MetricCard label="Allowance Paid This Month" value={formatCurrency(totalThisMonth)} hint={`${paymentsThisMonth.length} payment${paymentsThisMonth.length !== 1 ? 's' : ''} confirmed`} icon={Wallet} />
+          <MetricCard label="Allowance Paid All-Time" value={formatCurrency(totalAllTime)} hint={`${payments.length} payment${payments.length !== 1 ? 's' : ''} total`} icon={Wallet} />
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Leave Requests</CardTitle>
+              <CardDescription>Latest {Math.min(leaves.length, 5)} of {leaves.length}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {leaves.length === 0 ? (
+                <EmptyState text="No leave requests yet." />
+              ) : (
+                leaves.slice(0, 5).map(l => (
+                  <div key={l.id} className="flex items-center justify-between rounded-lg border p-3 gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{one(l.student)?.first_name} {one(l.student)?.last_name}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(l.start_date)} → {formatDate(l.end_date)}</p>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${LEAVE_STATUS_COLORS[l.status] ?? ''}`}>
+                      {l.status}
+                    </span>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Allowance Payments</CardTitle>
+              <CardDescription>Latest {Math.min(payments.length, 5)} of {payments.length}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {payments.length === 0 ? (
+                <EmptyState text="No payments confirmed yet." />
+              ) : (
+                payments.slice(0, 5).map(p => (
+                  <div key={p.id} className="flex items-center justify-between rounded-lg border p-3 gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{one(p.student)?.first_name} {one(p.student)?.last_name}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(p.payment_date)}</p>
+                    </div>
+                    <p className="font-semibold shrink-0">{formatCurrency(p.amount)}</p>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   if (role === 'student') {
     const studentId = profile?.student_id

@@ -4,21 +4,18 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, MoreHorizontal, Pencil, Trash2, UserCog, GraduationCap } from 'lucide-react'
-import { createEducationStaff, updateEducationStaff, deleteEducationStaff } from '@/app/actions/education-team'
-import { assignEducationStaffToClass } from '@/app/actions/education-team-classes'
+import { Plus, MoreHorizontal, Pencil, Trash2, ShieldCheck } from 'lucide-react'
+import { createEroStaff, updateEroStaff, deleteEroStaff } from '@/app/actions/ero-team'
 import { toast } from 'sonner'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = any
 
-interface EducationTeamTableProps { staff: AnyRecord[]; classes: AnyRecord[] }
+interface EroTeamTableProps { staff: AnyRecord[] }
 
 function CreateStaffDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter()
@@ -28,12 +25,12 @@ function CreateStaffDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    const result = await createEducationStaff(form)
+    const result = await createEroStaff(form)
     setSaving(false)
     if (result.error) {
       toast.error(result.error)
     } else {
-      toast.success('Education Team account created')
+      toast.success('ERO Team account created')
       setForm({ full_name: '', email: '', password: '' })
       onClose()
       router.refresh()
@@ -44,13 +41,13 @@ function CreateStaffDialog({ open, onClose }: { open: boolean; onClose: () => vo
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Education Team Member</DialogTitle>
+          <DialogTitle>Add ERO Team Member</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Full Name</label>
             <Input
-              placeholder="e.g. Dara Pich"
+              placeholder="e.g. Sokha Chea"
               value={form.full_name}
               onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
               required
@@ -97,7 +94,7 @@ function EditStaffDialog({ staff, onClose }: { staff: AnyRecord; onClose: () => 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    const result = await updateEducationStaff(staff.id, name)
+    const result = await updateEroStaff(staff.id, name)
     setSaving(false)
     if (result.error) toast.error(result.error)
     else { toast.success('Updated'); onClose(); router.refresh() }
@@ -106,7 +103,7 @@ function EditStaffDialog({ staff, onClose }: { staff: AnyRecord; onClose: () => 
   return (
     <Dialog open onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Edit Education Team Member</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Edit ERO Team Member</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Full Name</label>
@@ -127,42 +124,29 @@ function EditStaffDialog({ staff, onClose }: { staff: AnyRecord; onClose: () => 
   )
 }
 
-export function EducationTeamTable({ staff, classes }: EducationTeamTableProps) {
+export function EroTeamTable({ staff }: EroTeamTableProps) {
   const router = useRouter()
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<AnyRecord | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [assigningClass, setAssigningClass] = useState<Record<string, boolean>>({})
 
   const handleDelete = async () => {
     if (!deleteTarget) return
     setDeleting(true)
-    const result = await deleteEducationStaff(deleteTarget.id)
+    const result = await deleteEroStaff(deleteTarget.id)
     setDeleting(false)
     setDeleteTarget(null)
     if (result.error) toast.error(result.error)
     else { toast.success('Account deleted'); router.refresh() }
   }
 
-  const handleClassAssign = async (classId: string, staffId: string, currentStaffId: string | null) => {
-    const newStaffId = currentStaffId === staffId ? null : staffId
-    setAssigningClass(prev => ({ ...prev, [classId]: true }))
-    const result = await assignEducationStaffToClass(classId, newStaffId)
-    setAssigningClass(prev => ({ ...prev, [classId]: false }))
-    if (result.error) toast.error(result.error)
-    else { toast.success(newStaffId ? 'Class assigned' : 'Class removed'); router.refresh() }
-  }
-
-  const getAssignedClasses = (staffId: string) =>
-    classes.filter((c: AnyRecord) => c.education_staff_id === staffId)
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Education Team</h2>
-          <p className="text-sm text-muted-foreground">{staff.length} member{staff.length !== 1 ? 's' : ''} — handles leave requests &amp; allowance payments</p>
+          <h2 className="text-xl font-bold">ERO Team</h2>
+          <p className="text-sm text-muted-foreground">{staff.length} member{staff.length !== 1 ? 's' : ''} — can view dashboard, students, companies, positions, applications, interviews, internships, employment &amp; reports</p>
         </div>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />Add Member
@@ -175,72 +159,28 @@ export function EducationTeamTable({ staff, classes }: EducationTeamTableProps) 
             <TableRow>
               <TableHead>Member</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Assigned Classes</TableHead>
-              <TableHead>Add Class</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {staff.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
-                  No Education Team members yet. Click &quot;Add Member&quot; to create one.
+                <TableCell colSpan={3} className="text-center text-muted-foreground py-10">
+                  No ERO Team members yet. Click &quot;Add Member&quot; to create one.
                 </TableCell>
               </TableRow>
             ) : (
-              staff.map((member: AnyRecord) => {
-                const assigned = getAssignedClasses(member.id)
-                const available = classes.filter((c: AnyRecord) => !c.education_staff_id)
-                return (
+              staff.map((member: AnyRecord) => (
                 <TableRow key={member.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
-                        <UserCog className="h-4 w-4 text-violet-600" />
+                      <div className="h-8 w-8 rounded-full bg-sky-100 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="h-4 w-4 text-sky-600" />
                       </div>
                       <span className="font-medium">{member.full_name ?? '—'}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{member.email}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {assigned.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">None</span>
-                      ) : (
-                        assigned.map((cls: AnyRecord) => (
-                          <Badge
-                            key={cls.id}
-                            variant="secondary"
-                            className="gap-1 cursor-pointer hover:bg-red-100 hover:text-red-700 transition-colors text-xs"
-                            onClick={() => handleClassAssign(cls.id, member.id, cls.education_staff_id)}
-                            title="Click to remove"
-                          >
-                            <GraduationCap className="h-3 w-3" />
-                            {cls.name}
-                            {assigningClass[cls.id] && ' …'}
-                          </Badge>
-                        ))
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value=""
-                      onValueChange={classId => handleClassAssign(classId, member.id, null)}
-                      disabled={available.length === 0}
-                    >
-                      <SelectTrigger className="h-7 w-40 text-xs">
-                        <SelectValue placeholder={available.length === 0 ? 'All assigned' : 'Assign class…'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {available.map((c: AnyRecord) => (
-                          <SelectItem key={c.id} value={c.id} className="text-xs">
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -265,8 +205,7 @@ export function EducationTeamTable({ staff, classes }: EducationTeamTableProps) 
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-                )
-              })
+              ))
             )}
           </TableBody>
         </Table>
@@ -278,7 +217,7 @@ export function EducationTeamTable({ staff, classes }: EducationTeamTableProps) 
       <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Education Team Member</AlertDialogTitle>
+            <AlertDialogTitle>Delete ERO Team Member</AlertDialogTitle>
             <AlertDialogDescription>
               Delete <strong>{deleteTarget?.full_name}</strong>? Their login account will be removed.
             </AlertDialogDescription>
