@@ -42,7 +42,15 @@ export async function requireAdminOrTrainer() {
 
 export async function requireAdminOrStudent() {
   const context = await getCurrentProfile()
-  if (!context.role || context.role === 'trainer') return { error: 'You do not have permission.' }
+  if (context.role !== 'admin' && context.role !== 'student') return { error: 'You do not have permission.' }
+  return context
+}
+
+export async function requireAdminOrEducation() {
+  const context = await getCurrentProfile()
+  if (context.role !== 'admin' && context.role !== 'education_team') {
+    return { error: 'You do not have permission to perform this action.' }
+  }
   return context
 }
 

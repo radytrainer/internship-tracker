@@ -1,6 +1,6 @@
 import type { UserRole } from '@/types/database.types'
 
-export type AppRole = 'admin' | 'trainer' | 'student'
+export type AppRole = 'admin' | 'trainer' | 'student' | 'education_team'
 export type NavIconName =
   | 'LayoutDashboard'
   | 'Users'
@@ -13,6 +13,9 @@ export type NavIconName =
   | 'Award'
   | 'BarChart3'
   | 'Settings'
+  | 'CalendarOff'
+  | 'Wallet'
+  | 'UserCog'
 
 export interface NavItem {
   href: string
@@ -24,6 +27,7 @@ export interface NavItem {
 export function normalizeRole(role: UserRole | null | undefined): AppRole {
   if (role === 'trainer') return 'trainer'
   if (role === 'student') return 'student'
+  if (role === 'education_team') return 'education_team'
   return 'admin'
 }
 
@@ -31,19 +35,23 @@ export function roleLabel(role: UserRole | null | undefined) {
   const normalized = normalizeRole(role)
   if (normalized === 'admin') return 'Administrator'
   if (normalized === 'trainer') return 'Trainer'
+  if (normalized === 'education_team') return 'Education Team'
   return 'Student'
 }
 
 export const dashboardNavItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard', roles: ['admin', 'trainer', 'student'] },
+  { href: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard', roles: ['admin', 'trainer', 'student', 'education_team'] },
   { href: '/students', label: 'Students', icon: 'Users', roles: ['admin', 'trainer'] },
   { href: '/trainers', label: 'Trainers', icon: 'UserCheck', roles: ['admin'] },
+  { href: '/education-team', label: 'Education Team', icon: 'UserCog', roles: ['admin'] },
   { href: '/companies', label: 'Companies', icon: 'Building2', roles: ['admin', 'trainer'] },
   { href: '/positions', label: 'Positions', icon: 'Briefcase', roles: ['admin', 'trainer'] },
   { href: '/applications', label: 'Applications', icon: 'FileText', roles: ['admin', 'trainer', 'student'] },
   { href: '/interviews', label: 'Interviews', icon: 'MessageSquare', roles: ['admin', 'trainer', 'student'] },
   { href: '/internships', label: 'Internships', icon: 'ClipboardList', roles: ['admin', 'trainer', 'student'] },
   { href: '/employment', label: 'Employment', icon: 'Award', roles: ['admin', 'trainer', 'student'] },
+  { href: '/leaves', label: 'Leave Requests', icon: 'CalendarOff', roles: ['admin', 'education_team'] },
+  { href: '/payments', label: 'Allowance Payments', icon: 'Wallet', roles: ['admin', 'education_team'] },
   { href: '/reports', label: 'Reports', icon: 'BarChart3', roles: ['admin', 'trainer'] },
   { href: '/settings', label: 'Settings', icon: 'Settings', roles: ['admin', 'trainer'] },
 ]

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentProfile } from '@/lib/auth/server'
 import { KPICards } from '@/components/dashboard/kpi-cards'
@@ -16,6 +17,8 @@ export const revalidate = 60
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { role, profile } = await getCurrentProfile()
+
+  if (role === 'education_team') redirect('/leaves')
 
   if (role === 'student') {
     const studentId = profile?.student_id

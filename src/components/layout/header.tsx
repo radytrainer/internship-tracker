@@ -16,7 +16,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import Link from 'next/link'
 import {
   GraduationCap, LayoutDashboard, Users, UserCheck, Building2, Briefcase,
-  FileText, MessageSquare, ClipboardList, Award, BarChart3, Settings
+  FileText, MessageSquare, ClipboardList, Award, BarChart3, Settings,
+  CalendarOff, Wallet, UserCog
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavItemsForRole, roleLabel } from '@/lib/roles'
@@ -33,6 +34,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/reports': 'Reports & Analytics',
   '/settings': 'Settings',
   '/trainers': 'Trainers',
+  '/education-team': 'Education Team',
+  '/leaves': 'Leave Requests',
+  '/payments': 'Allowance Payments',
 }
 
 const iconMap = {
@@ -47,6 +51,9 @@ const iconMap = {
   Award,
   BarChart3,
   Settings,
+  CalendarOff,
+  Wallet,
+  UserCog,
 }
 
 interface HeaderProps {

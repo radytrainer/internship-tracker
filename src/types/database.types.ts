@@ -1,6 +1,6 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type UserRole = 'admin' | 'career_staff' | 'trainer' | 'student'
+export type UserRole = 'admin' | 'career_staff' | 'trainer' | 'student' | 'education_team'
 export type Gender = 'Male' | 'Female'
 export type StudentStatus =
   | 'Studying'
@@ -189,6 +189,44 @@ export interface EmploymentRecord {
   updated_at: string
   // joined
   student?: Student
+}
+
+export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected'
+
+export interface StudentLeave {
+  id: string
+  student_id: string
+  internship_id: string | null
+  start_date: string
+  end_date: string
+  reason: string | null
+  status: LeaveStatus
+  reviewed_by: string | null
+  reviewed_at: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  // joined
+  student?: Student
+  internship?: Internship
+  reviewer?: Profile
+}
+
+export interface AllowancePayment {
+  id: string
+  student_id: string
+  internship_id: string | null
+  amount: number
+  payment_date: string
+  payment_time: string | null
+  confirmed_by: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+  // joined
+  student?: Student
+  internship?: Internship
+  confirmer?: Profile
 }
 
 export interface DashboardKPIs {
