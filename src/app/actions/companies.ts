@@ -17,6 +17,8 @@ const companySchema = z.object({
   is_visible: z.boolean().default(true),
   has_mou: z.boolean().default(false),
   is_blacklisted: z.boolean().default(false),
+  outreach_status: z.enum(['not_contacted', 'contacted', 'follow_up', 'confirmed', 'declined']).default('not_contacted'),
+  last_contacted_at: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   logo_url: z.string().url().optional().nullable().or(z.literal('')),
 })
@@ -46,6 +48,7 @@ export async function createCompany(data: CompanyFormData) {
     ...d,
     contact_email: d.contact_email || null,
     website: d.website || null,
+    last_contacted_at: d.last_contacted_at || null,
   })
   if (error) return { success: false, error: error.message }
   revalidatePath('/companies')
@@ -64,6 +67,7 @@ export async function updateCompany(id: string, data: CompanyFormData) {
     ...d,
     contact_email: d.contact_email || null,
     website: d.website || null,
+    last_contacted_at: d.last_contacted_at || null,
   }).eq('id', id)
   if (error) return { success: false, error: error.message }
   revalidatePath('/companies')
@@ -142,6 +146,20 @@ export async function toggleCompanyBlacklist(id: string, is_blacklisted: boolean
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('companies').update({ is_blacklisted }).eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/companies')
+  return { success: true, error: null }
+}
+
+export async function updateCompanyOutreachStatus(id: string, outreach_status: CompanyFormData['outreach_status']) {
+  const auth = await requireAdmin()
+  if ('error' in auth) return auth
+  const supabase = createAdminClient()
+  const update: { outreach_status: typeof outreach_status; last_contacted_at?: string } = { outreach_status }
+  if (outreach_status !== 'not_contacted') {
+    update.last_contacted_at = new Date().toISOString().slice(0, 10)
+  }
+  const { error } = await supabase.from('companies').update(update).eq('id', id)
   if (error) return { success: false, error: error.message }
   revalidatePath('/companies')
   return { success: true, error: null }

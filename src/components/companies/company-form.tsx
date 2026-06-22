@@ -9,9 +9,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2 } from 'lucide-react'
 import { AvatarUpload } from '@/components/ui/avatar-upload'
 import { createCompany, updateCompany } from '@/app/actions/companies'
+import { OUTREACH_STATUS_OPTIONS } from '@/lib/outreach-status'
 import { toast } from 'sonner'
 import type { Company } from '@/types/database.types'
 
@@ -27,6 +29,8 @@ const schema = z.object({
   is_visible: z.boolean().default(true),
   has_mou: z.boolean().default(false),
   is_blacklisted: z.boolean().default(false),
+  outreach_status: z.enum(['not_contacted', 'contacted', 'follow_up', 'confirmed', 'declined']).default('not_contacted'),
+  last_contacted_at: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   logo_url: z.string().url().optional().nullable().or(z.literal('')),
 })
@@ -37,6 +41,7 @@ const EMPTY: FormValues = {
   company_name: '', industry: '', address: '', contact_person: '',
   contact_email: '', contact_phone: '', website: '',
   max_students_per_company: 10, is_visible: true, has_mou: false, is_blacklisted: false,
+  outreach_status: 'not_contacted', last_contacted_at: '',
   notes: '', logo_url: '',
 }
 
@@ -57,6 +62,8 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
         is_visible: company.is_visible ?? true,
         has_mou: company.has_mou ?? false,
         is_blacklisted: company.is_blacklisted ?? false,
+        outreach_status: company.outreach_status ?? 'not_contacted',
+        last_contacted_at: company.last_contacted_at ?? '',
         notes: company.notes ?? '',
         logo_url: company.logo_url ?? '',
       })
@@ -159,6 +166,32 @@ export function CompanyForm({ open, onClose, company }: { open: boolean; onClose
                 <FormItem>
                   <FormLabel>Max Students</FormLabel>
                   <FormControl><Input type="number" min={0} {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="outreach_status" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Outreach Status</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {OUTREACH_STATUS_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="last_contacted_at" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last Contacted</FormLabel>
+                  <FormControl><Input type="date" {...field} value={field.value ?? ''} /></FormControl>
+                  <p className="text-xs text-muted-foreground">Auto-updates when status changes; editable</p>
                   <FormMessage />
                 </FormItem>
               )} />

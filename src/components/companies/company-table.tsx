@@ -8,12 +8,14 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Search, Pencil, Trash2, ExternalLink, MoreHorizontal, Send, Eye, EyeOff, ShieldCheck, ShieldOff, Ban, CircleCheck } from 'lucide-react'
 import { CompanyForm } from './company-form'
-import { deleteCompany, toggleCompanyVisibility, toggleCompanyMOU, toggleCompanyBlacklist } from '@/app/actions/companies'
+import { deleteCompany, toggleCompanyVisibility, toggleCompanyMOU, toggleCompanyBlacklist, updateCompanyOutreachStatus } from '@/app/actions/companies'
+import { OUTREACH_STATUS_OPTIONS, OUTREACH_STATUS_STYLES } from '@/lib/outreach-status'
 import { toast } from 'sonner'
 import type { AppRole } from '@/lib/roles'
-import type { Company } from '@/types/database.types'
+import type { Company, OutreachStatus } from '@/types/database.types'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = any
@@ -73,6 +75,12 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
     else { toast.success(!current ? 'Company blacklisted' : 'Company removed from blacklist'); router.refresh() }
   }
 
+  const handleOutreachStatusChange = async (id: string, status: OutreachStatus) => {
+    const result = await updateCompanyOutreachStatus(id, status)
+    if (result.error) toast.error(result.error)
+    else { toast.success('Outreach status updated'); router.refresh() }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -97,6 +105,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
               <TableHead>Company</TableHead>
               <TableHead>Telegram</TableHead>
               <TableHead>Contact</TableHead>
+              <TableHead>Outreach</TableHead>
               <TableHead>Max Students</TableHead>
               <TableHead>Positions</TableHead>
               <TableHead>Applications</TableHead>
@@ -105,7 +114,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">No companies found</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-10">No companies found</TableCell></TableRow>
             ) : (
               filtered.map(company => {
                 const c = company as AnyRecord
@@ -161,6 +170,27 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
                         {c.contact_email && <p className="text-xs text-muted-foreground">{c.contact_email}</p>}
                         {c.contact_phone && <p className="text-xs text-muted-foreground">{c.contact_phone}</p>}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {canManage ? (
+                        <Select value={c.outreach_status ?? 'not_contacted'} onValueChange={v => handleOutreachStatusChange(c.id, v as OutreachStatus)}>
+                          <SelectTrigger className={`h-7 w-[170px] text-xs border-0 font-medium ${OUTREACH_STATUS_STYLES[c.outreach_status as OutreachStatus ?? 'not_contacted']}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {OUTREACH_STATUS_OPTIONS.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className={`inline-flex rounded-full text-xs font-medium px-2 py-1 ${OUTREACH_STATUS_STYLES[c.outreach_status as OutreachStatus ?? 'not_contacted']}`}>
+                          {OUTREACH_STATUS_OPTIONS.find(o => o.value === c.outreach_status)?.label ?? 'Not Contacted'}
+                        </span>
+                      )}
+                      {c.last_contacted_at && (
+                        <p className="text-[10px] text-muted-foreground mt-1">Last: {c.last_contacted_at}</p>
+                      )}
                     </TableCell>
                     <TableCell><Badge variant="outline">{c.max_students_per_company}</Badge></TableCell>
                     <TableCell><Badge variant="secondary">{posCount}</Badge></TableCell>

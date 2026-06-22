@@ -74,6 +74,8 @@ export interface Student {
   generation?: Generation
 }
 
+export type OutreachStatus = 'not_contacted' | 'contacted' | 'follow_up' | 'confirmed' | 'declined'
+
 export interface Company {
   id: string
   company_name: string
@@ -87,6 +89,8 @@ export interface Company {
   is_visible: boolean
   has_mou: boolean
   is_blacklisted: boolean
+  outreach_status: OutreachStatus
+  last_contacted_at: string | null
   notes: string | null
   created_at: string
   updated_at: string
