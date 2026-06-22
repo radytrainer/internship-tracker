@@ -48,7 +48,7 @@ export function EmploymentTable({ records, students, role }: EmploymentTableProp
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const canManage = role === 'admin' || role === 'ero_team'
+  const canManage = role === 'admin' || role === 'ero_team' || role === 'pl_team'
 
   const filtered = useMemo(() => (records as AnyRecord[]).filter((record: AnyRecord) => {
     const q = search.toLowerCase()

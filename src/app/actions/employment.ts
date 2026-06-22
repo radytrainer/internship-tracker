@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdminOrTrainer } from '@/lib/auth/server'
+import { requireInternshipOrEmploymentManager } from '@/lib/auth/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -20,7 +20,7 @@ const employmentSchema = z.object({
 export type EmploymentFormData = z.infer<typeof employmentSchema>
 
 export async function createEmploymentRecord(data: EmploymentFormData) {
-  const auth = await requireAdminOrTrainer()
+  const auth = await requireInternshipOrEmploymentManager()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const parsed = employmentSchema.safeParse(data)
@@ -40,7 +40,7 @@ export async function createEmploymentRecord(data: EmploymentFormData) {
 }
 
 export async function updateEmploymentRecord(id: string, data: Partial<EmploymentFormData>) {
-  const auth = await requireAdminOrTrainer()
+  const auth = await requireInternshipOrEmploymentManager()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('employment_records').update(data).eq('id', id)
@@ -57,7 +57,7 @@ export async function updateEmploymentRecord(id: string, data: Partial<Employmen
 }
 
 export async function deleteEmploymentRecord(id: string) {
-  const auth = await requireAdminOrTrainer()
+  const auth = await requireInternshipOrEmploymentManager()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('employment_records').delete().eq('id', id)

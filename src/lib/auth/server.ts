@@ -62,6 +62,14 @@ export async function requireAdminOrEro() {
   return context
 }
 
+export async function requireInternshipOrEmploymentManager() {
+  const context = await getCurrentProfile()
+  if (context.role !== 'admin' && context.role !== 'trainer' && context.role !== 'ero_team' && context.role !== 'pl_team') {
+    return { error: 'You do not have permission to perform this action.' }
+  }
+  return context
+}
+
 export async function getTrainerClassIds(profileId: string): Promise<string[]> {
   const supabase = createAdminClient()
   const { data } = await supabase
@@ -77,5 +85,14 @@ export async function getEducationStaffClassIds(profileId: string): Promise<stri
     .from('classes')
     .select('id')
     .eq('education_staff_id', profileId)
+  return (data ?? []).map((c: { id: string }) => c.id)
+}
+
+export async function getPLStaffClassIds(profileId: string): Promise<string[]> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('classes')
+    .select('id')
+    .eq('pl_staff_id', profileId)
   return (data ?? []).map((c: { id: string }) => c.id)
 }

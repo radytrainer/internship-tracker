@@ -7,7 +7,7 @@ import {
   GraduationCap, LayoutDashboard, Users, UserCheck, Building2,
   Briefcase, FileText, MessageSquare, ClipboardList,
   Award, BarChart3, Settings, ChevronLeft, ChevronRight,
-  CalendarOff, Wallet, UserCog, ShieldCheck
+  CalendarOff, Wallet, UserCog, ShieldCheck, Handshake
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -32,6 +32,7 @@ const iconMap = {
   Wallet,
   UserCog,
   ShieldCheck,
+  Handshake,
 }
 
 interface SidebarProps {

@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdminOrTrainer } from '@/lib/auth/server'
+import { requireInternshipOrEmploymentManager } from '@/lib/auth/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -25,7 +25,7 @@ const internshipSchema = z.object({
 export type InternshipFormData = z.infer<typeof internshipSchema>
 
 export async function createInternship(data: InternshipFormData) {
-  const auth = await requireAdminOrTrainer()
+  const auth = await requireInternshipOrEmploymentManager()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const parsed = internshipSchema.safeParse(data)
@@ -48,7 +48,7 @@ export async function createInternship(data: InternshipFormData) {
 }
 
 export async function updateInternship(id: string, data: Partial<InternshipFormData>) {
-  const auth = await requireAdminOrTrainer()
+  const auth = await requireInternshipOrEmploymentManager()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const supervisor_email = data.supervisor_email || null
@@ -69,7 +69,7 @@ export async function updateInternship(id: string, data: Partial<InternshipFormD
 }
 
 export async function deleteInternship(id: string) {
-  const auth = await requireAdminOrTrainer()
+  const auth = await requireInternshipOrEmploymentManager()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('internships').delete().eq('id', id)
