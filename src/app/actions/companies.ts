@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { requireAdmin, requireAdminOrStudent } from '@/lib/auth/server'
+import { requireAdminOrEro, requireAdminOrStudent } from '@/lib/auth/server'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -56,7 +56,7 @@ export async function createCompany(data: CompanyFormData) {
 }
 
 export async function updateCompany(id: string, data: CompanyFormData) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const parsed = companySchema.safeParse(data)
@@ -75,7 +75,7 @@ export async function updateCompany(id: string, data: CompanyFormData) {
 }
 
 export async function deleteCompany(id: string) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('companies').delete().eq('id', id)
@@ -99,7 +99,7 @@ export async function createPosition(data: PositionFormData) {
 }
 
 export async function updatePosition(id: string, data: PositionFormData) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const parsed = positionSchema.safeParse(data)
@@ -112,7 +112,7 @@ export async function updatePosition(id: string, data: PositionFormData) {
 }
 
 export async function deletePosition(id: string) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('company_positions').delete().eq('id', id)
@@ -122,7 +122,7 @@ export async function deletePosition(id: string) {
 }
 
 export async function toggleCompanyVisibility(id: string, is_visible: boolean) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('companies').update({ is_visible }).eq('id', id)
@@ -132,7 +132,7 @@ export async function toggleCompanyVisibility(id: string, is_visible: boolean) {
 }
 
 export async function toggleCompanyMOU(id: string, has_mou: boolean) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('companies').update({ has_mou }).eq('id', id)
@@ -142,7 +142,7 @@ export async function toggleCompanyMOU(id: string, has_mou: boolean) {
 }
 
 export async function toggleCompanyBlacklist(id: string, is_blacklisted: boolean) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const { error } = await supabase.from('companies').update({ is_blacklisted }).eq('id', id)
@@ -152,7 +152,7 @@ export async function toggleCompanyBlacklist(id: string, is_blacklisted: boolean
 }
 
 export async function updateCompanyOutreachStatus(id: string, outreach_status: CompanyFormData['outreach_status']) {
-  const auth = await requireAdmin()
+  const auth = await requireAdminOrEro()
   if ('error' in auth) return auth
   const supabase = createAdminClient()
   const update: { outreach_status: typeof outreach_status; last_contacted_at?: string } = { outreach_status }

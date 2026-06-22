@@ -42,7 +42,7 @@ export function InternshipTable({ internships, students, companies, role }: Inte
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const canManage = role === 'admin'
+  const canManage = role === 'admin' || role === 'ero_team'
 
   const filtered = useMemo(() => (internships as AnyRecord[]).filter((iv: AnyRecord) => {
     const q = search.toLowerCase()

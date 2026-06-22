@@ -34,7 +34,7 @@ export async function requireAdmin() {
 
 export async function requireAdminOrTrainer() {
   const context = await getCurrentProfile()
-  if (context.role !== 'admin' && context.role !== 'trainer') {
+  if (context.role !== 'admin' && context.role !== 'trainer' && context.role !== 'ero_team') {
     return { error: 'You do not have permission to perform this action.' }
   }
   return context
@@ -42,13 +42,21 @@ export async function requireAdminOrTrainer() {
 
 export async function requireAdminOrStudent() {
   const context = await getCurrentProfile()
-  if (context.role !== 'admin' && context.role !== 'student') return { error: 'You do not have permission.' }
+  if (context.role !== 'admin' && context.role !== 'student' && context.role !== 'ero_team') return { error: 'You do not have permission.' }
   return context
 }
 
 export async function requireAdminOrEducation() {
   const context = await getCurrentProfile()
   if (context.role !== 'admin' && context.role !== 'education_team') {
+    return { error: 'You do not have permission to perform this action.' }
+  }
+  return context
+}
+
+export async function requireAdminOrEro() {
+  const context = await getCurrentProfile()
+  if (context.role !== 'admin' && context.role !== 'ero_team') {
     return { error: 'You do not have permission to perform this action.' }
   }
   return context

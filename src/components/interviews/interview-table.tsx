@@ -47,7 +47,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const canManage = role === 'admin'
+  const canManage = role === 'admin' || role === 'ero_team'
   const canSchedule = role !== 'student'
   const showStudentColumn = role !== 'student'
 

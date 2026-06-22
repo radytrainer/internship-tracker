@@ -44,7 +44,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const canManage = role === 'admin'
+  const canManage = role === 'admin' || role === 'ero_team'
 
   const filtered = useMemo(() => {
     const results = positions.filter(p => {

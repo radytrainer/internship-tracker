@@ -34,7 +34,7 @@ function initials(name: string) {
 interface CompanyTableProps { companies: Company[]; role: AppRole }
 
 export function CompanyTable({ companies, role }: CompanyTableProps) {
-  const canManage = role === 'admin'
+  const canManage = role === 'admin' || role === 'ero_team'
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
