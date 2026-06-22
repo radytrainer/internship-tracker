@@ -6,6 +6,8 @@ import { GenderChart } from '@/components/dashboard/gender-chart'
 import { GenerationChart } from '@/components/dashboard/generation-chart'
 import { CompanyPerformance } from '@/components/dashboard/company-performance'
 import { AllowanceSalaryChart } from '@/components/dashboard/allowance-salary-chart'
+import { GenderPositionChart } from '@/components/dashboard/gender-position-chart'
+import { GenderSalaryChart } from '@/components/dashboard/gender-salary-chart'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate, STUDENT_STATUS_COLORS, APPLICATION_STATUS_COLORS, LEAVE_STATUS_COLORS } from '@/lib/utils'
@@ -558,12 +560,17 @@ export default async function DashboardPage() {
 
   const { data: internshipsRaw } = await supabase
     .from('internships')
-    .select('allowance, companies(company_name)')
+    .select('allowance, companies(company_name), students(gender)')
     .not('allowance', 'is', null)
 
   const allowanceByCompany = buildStatsByGroup(
     internshipsRaw ?? [],
     row => (one(row.companies as { company_name: string }[] | { company_name: string } | null)?.company_name ?? 'Unknown'),
+    row => row.allowance as number
+  )
+  const allowanceByGender = buildStatsByGroup(
+    internshipsRaw ?? [],
+    row => (one(row.students as { gender: string }[] | { gender: string } | null)?.gender ?? 'Unknown'),
     row => row.allowance as number
   )
   const avgAllowance = internshipsRaw?.length
@@ -572,7 +579,7 @@ export default async function DashboardPage() {
 
   const { data: employmentRaw } = await supabase
     .from('employment_records')
-    .select('salary, company_name')
+    .select('salary, company_name, students(gender)')
     .not('salary', 'is', null)
 
   const salaryByCompany = buildStatsByGroup(
@@ -580,9 +587,25 @@ export default async function DashboardPage() {
     row => row.company_name as string,
     row => row.salary as number
   )
+  const salaryByGender = buildStatsByGroup(
+    employmentRaw ?? [],
+    row => (one(row.students as { gender: string }[] | { gender: string } | null)?.gender ?? 'Unknown'),
+    row => row.salary as number
+  )
   const avgSalary = employmentRaw?.length
     ? Math.round((employmentRaw as { salary: number }[]).reduce((sum, row) => sum + (row.salary ?? 0), 0) / employmentRaw.length)
     : 0
+
+  const { data: applicationGenderRaw } = await supabase
+    .from('internship_applications')
+    .select('position:company_positions(position_name), student:students(gender)')
+
+  const applicationsByPositionGender = buildGenderCountsByGroup(
+    (applicationGenderRaw ?? []).map(row => ({
+      group: one(row.position as { position_name: string }[] | { position_name: string } | null)?.position_name ?? 'Unknown',
+      gender: one(row.student as { gender: string }[] | { gender: string } | null)?.gender ?? 'Unknown',
+    }))
+  )
 
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
@@ -671,6 +694,11 @@ export default async function DashboardPage() {
         avgAllowance={avgAllowance}
         avgSalary={avgSalary}
       />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <GenderPositionChart data={applicationsByPositionGender} />
+        <GenderSalaryChart allowanceByGender={allowanceByGender} salaryByGender={salaryByGender} />
+      </div>
     </div>
   )
 }
@@ -743,6 +771,20 @@ function summarizeByKey<T>(rows: T[], getLabel: (row: T) => string) {
   return Array.from(counts.entries())
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count)
+}
+
+function buildGenderCountsByGroup(rows: { group: string; gender: string }[]) {
+  const map = new Map<string, { Male: number; Female: number }>()
+  for (const row of rows) {
+    if (!map.has(row.group)) map.set(row.group, { Male: 0, Female: 0 })
+    const entry = map.get(row.group)!
+    if (row.gender === 'Male' || row.gender === 'Female') entry[row.gender]++
+  }
+
+  return Array.from(map.entries())
+    .map(([position, counts]) => ({ position, ...counts }))
+    .sort((a, b) => (b.Male + b.Female) - (a.Male + a.Female))
+    .slice(0, 8)
 }
 
 function buildStatsByGroup(
