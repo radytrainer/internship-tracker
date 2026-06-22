@@ -218,6 +218,7 @@ export interface AllowancePayment {
   id: string
   student_id: string
   internship_id: string | null
+  employment_id: string | null
   amount: number
   payment_date: string
   payment_time: string | null
@@ -228,6 +229,7 @@ export interface AllowancePayment {
   // joined
   student?: Student
   internship?: Internship
+  employment?: EmploymentRecord
   confirmer?: Profile
 }
 

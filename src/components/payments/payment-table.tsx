@@ -23,10 +23,11 @@ interface PaymentTableProps {
   payments: AnyRecord[]
   students: AnyRecord[]
   internships: AnyRecord[]
+  employmentRecords: AnyRecord[]
 }
 
 const EMPTY: PaymentFormData = {
-  student_id: '', internship_id: null, amount: 0, payment_date: format(new Date(), 'yyyy-MM-dd'), payment_time: '', notes: '',
+  student_id: '', internship_id: null, employment_id: null, amount: 0, payment_date: format(new Date(), 'yyyy-MM-dd'), payment_time: '', notes: '',
 }
 
 function monthKey(date: string) {
@@ -37,14 +38,15 @@ function monthLabel(key: string) {
   return format(parseISO(`${key}-01`), 'MMMM yyyy')
 }
 
-function PaymentFormDialog({ open, onClose, payment, students, internships }: {
-  open: boolean; onClose: () => void; payment: AnyRecord | null; students: AnyRecord[]; internships: AnyRecord[]
+function PaymentFormDialog({ open, onClose, payment, students, internships, employmentRecords }: {
+  open: boolean; onClose: () => void; payment: AnyRecord | null; students: AnyRecord[]; internships: AnyRecord[]; employmentRecords: AnyRecord[]
 }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<PaymentFormData>(payment ? {
     student_id: payment.student_id,
     internship_id: payment.internship_id,
+    employment_id: payment.employment_id,
     amount: payment.amount,
     payment_date: payment.payment_date,
     payment_time: payment.payment_time ?? '',
@@ -52,6 +54,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships }: {
   } : EMPTY)
 
   const studentInternships = internships.filter(i => i.student_id === form.student_id)
+  const studentEmploymentRecords = employmentRecords.filter(e => e.student_id === form.student_id)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,7 +72,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships }: {
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Student *</label>
-            <Select value={form.student_id} onValueChange={v => setForm(f => ({ ...f, student_id: v, internship_id: null }))}>
+            <Select value={form.student_id} onValueChange={v => setForm(f => ({ ...f, student_id: v, internship_id: null, employment_id: null }))}>
               <SelectTrigger><SelectValue placeholder="Select student" /></SelectTrigger>
               <SelectContent>
                 {students.map(s => (
@@ -79,11 +82,13 @@ function PaymentFormDialog({ open, onClose, payment, students, internships }: {
             </Select>
           </div>
 
+          <p className="text-xs text-muted-foreground">If this allowance is coming from an internship or a full-time job, link it below (pick one, not both).</p>
+
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Internship (optional)</label>
             <Select
               value={form.internship_id ?? 'none'}
-              onValueChange={v => setForm(f => ({ ...f, internship_id: v === 'none' ? null : v }))}
+              onValueChange={v => setForm(f => ({ ...f, internship_id: v === 'none' ? null : v, employment_id: v === 'none' ? f.employment_id : null }))}
               disabled={!form.student_id || studentInternships.length === 0}
             >
               <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
@@ -92,6 +97,25 @@ function PaymentFormDialog({ open, onClose, payment, students, internships }: {
                 {studentInternships.map(i => (
                   <SelectItem key={i.id} value={i.id}>
                     {i.company?.company_name ?? 'Unknown'} — {i.position}{i.allowance != null ? ` (${formatCurrency(i.allowance)}/mo)` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Full-Time Job (optional)</label>
+            <Select
+              value={form.employment_id ?? 'none'}
+              onValueChange={v => setForm(f => ({ ...f, employment_id: v === 'none' ? null : v, internship_id: v === 'none' ? f.internship_id : null }))}
+              disabled={!form.student_id || studentEmploymentRecords.length === 0}
+            >
+              <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {studentEmploymentRecords.map(e => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.company_name ?? 'Unknown'} — {e.position}{e.salary != null ? ` (${formatCurrency(e.salary)}/mo)` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -131,7 +155,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships }: {
   )
 }
 
-export function PaymentTable({ payments, students, internships }: PaymentTableProps) {
+export function PaymentTable({ payments, students, internships, employmentRecords }: PaymentTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -222,7 +246,7 @@ export function PaymentTable({ payments, students, internships }: PaymentTablePr
           <TableHeader>
             <TableRow>
               <TableHead>Student</TableHead>
-              <TableHead>Internship</TableHead>
+              <TableHead>Source</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Time</TableHead>
@@ -237,7 +261,11 @@ export function PaymentTable({ payments, students, internships }: PaymentTablePr
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.student?.first_name} {p.student?.last_name}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {p.internship ? `${p.internship.company?.company_name ?? ''} — ${p.internship.position}` : '—'}
+                    {p.internship ? (
+                      <span><span className="text-[10px] uppercase tracking-wide text-blue-600 font-semibold mr-1">Internship</span>{p.internship.company?.company_name ?? ''} — {p.internship.position}</span>
+                    ) : p.employment ? (
+                      <span><span className="text-[10px] uppercase tracking-wide text-violet-600 font-semibold mr-1">Job</span>{p.employment.company_name ?? ''} — {p.employment.position}</span>
+                    ) : '—'}
                   </TableCell>
                   <TableCell className="font-semibold">{formatCurrency(p.amount)}</TableCell>
                   <TableCell className="text-sm">{formatDate(p.payment_date)}</TableCell>
@@ -276,6 +304,7 @@ export function PaymentTable({ payments, students, internships }: PaymentTablePr
         payment={editTarget}
         students={students}
         internships={internships}
+        employmentRecords={employmentRecords}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>

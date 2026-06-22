@@ -11,10 +11,10 @@ export default async function PaymentsPage() {
 
   const admin = createAdminClient()
 
-  const [{ data: payments }, { data: students }, { data: internships }] = await Promise.all([
+  const [{ data: payments }, { data: students }, { data: internships }, { data: employmentRecords }] = await Promise.all([
     admin
       .from('allowance_payments')
-      .select('*, student:students(id, first_name, last_name, student_code), internship:internships(id, position, allowance, company:companies(company_name))')
+      .select('*, student:students(id, first_name, last_name, student_code), internship:internships(id, position, allowance, company:companies(company_name)), employment:employment_records(id, position, company_name, salary)')
       .order('payment_date', { ascending: false }),
     admin
       .from('students')
@@ -24,7 +24,18 @@ export default async function PaymentsPage() {
       .from('internships')
       .select('id, student_id, position, allowance, company:companies(company_name)')
       .order('created_at', { ascending: false }),
+    admin
+      .from('employment_records')
+      .select('id, student_id, position, company_name, salary')
+      .order('created_at', { ascending: false }),
   ])
 
-  return <PaymentTable payments={payments ?? []} students={students ?? []} internships={internships ?? []} />
+  return (
+    <PaymentTable
+      payments={payments ?? []}
+      students={students ?? []}
+      internships={internships ?? []}
+      employmentRecords={employmentRecords ?? []}
+    />
+  )
 }
