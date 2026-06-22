@@ -64,7 +64,7 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
     const result = await createStudentAuthAccount(studentId)
     setCreatingLoginFor(null)
     if (result.error) toast.error(result.error)
-    else { toast.success('Login created â€” email + password123'); router.refresh() }
+    else { toast.success('Login created — email + password123'); router.refresh() }
   }
 
   const handleCreateAllLogins = async () => {
@@ -72,7 +72,7 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
     const result = await createAllStudentAuthAccounts()
     setCreatingAllLogins(false)
     if (result.error) toast.error(result.error)
-    else toast.success(`Done â€” ${(result as { created?: number }).created ?? 0} created, ${(result as { skipped?: number }).skipped ?? 0} skipped`)
+    else toast.success(`Done — ${(result as { created?: number }).created ?? 0} created, ${(result as { skipped?: number }).skipped ?? 0} skipped`)
     router.refresh()
   }
 
@@ -273,14 +273,14 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
                         {enrichedStudent.gender}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">{enrichedStudent.class?.name ?? 'â€”'}</TableCell>
-                    <TableCell className="text-sm">{enrichedStudent.generation?.name ?? 'â€”'}</TableCell>
+                    <TableCell className="text-sm">{enrichedStudent.class?.name ?? '—'}</TableCell>
+                    <TableCell className="text-sm">{enrichedStudent.generation?.name ?? '—'}</TableCell>
                     <TableCell>
                       <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', STUDENT_STATUS_COLORS[enrichedStudent.status])}>
                         {enrichedStudent.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{enrichedStudent.phone ?? 'â€”'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{enrichedStudent.phone ?? '—'}</TableCell>
                     {canManage && (
                       <TableCell>
                         <DropdownMenu>
