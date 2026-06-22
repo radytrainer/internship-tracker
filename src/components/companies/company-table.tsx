@@ -37,6 +37,7 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
   const canManage = role === 'admin' || role === 'ero_team'
   const router = useRouter()
   const [search, setSearch] = useState('')
+  const [outreachFilter, setOutreachFilter] = useState<OutreachStatus | 'all'>('all')
   const [formOpen, setFormOpen] = useState(false)
   const [editCompany, setEditCompany] = useState<Company | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null)
@@ -44,8 +45,10 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
 
   const filtered = useMemo(() => companies.filter(c => {
     const q = search.toLowerCase()
-    return !q || c.company_name.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || c.contact_person?.toLowerCase().includes(q)
-  }), [companies, search])
+    const matchesSearch = !q || c.company_name.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || c.contact_person?.toLowerCase().includes(q)
+    const matchesOutreach = outreachFilter === 'all' || (c as AnyRecord).outreach_status === outreachFilter || (outreachFilter === 'not_contacted' && !(c as AnyRecord).outreach_status)
+    return matchesSearch && matchesOutreach
+  }), [companies, search, outreachFilter])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -93,9 +96,22 @@ export function CompanyTable({ companies, role }: CompanyTableProps) {
         </Button>
       </div>
 
-      <div className="relative w-full sm:max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search companies..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search companies..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Select value={outreachFilter} onValueChange={v => setOutreachFilter(v as OutreachStatus | 'all')}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Filter by outreach" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Outreach Statuses</SelectItem>
+            {OUTREACH_STATUS_OPTIONS.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
