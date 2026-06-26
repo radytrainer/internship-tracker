@@ -42,7 +42,7 @@ export function ApplicationTable({
   const [deleteTarget, setDeleteTarget] = useState<InternshipApplication | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  const canManage = role === 'admin'
+  const canManage = role === 'admin' || role === 'trainer'
   const showStudentColumn = role !== 'student'
   const pageTitle = showStudentColumn ? 'Internship Applications' : 'My Applications'
   const pageSubtitle = showStudentColumn ? 'applications' : 'records in your tracker'

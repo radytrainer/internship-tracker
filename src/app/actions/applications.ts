@@ -40,7 +40,7 @@ async function canManageExistingApplication(id: string) {
   const auth = await authorizeApplicationWrite()
   if ('error' in auth) return auth
 
-  if (auth.role === 'admin') return auth
+  if (auth.role === 'admin' || auth.role === 'trainer') return auth
 
   const supabase = createAdminClient()
   const { data: existing } = await supabase
