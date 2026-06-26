@@ -134,20 +134,20 @@ export function InternshipTable({ internships, students, companies, role }: Inte
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium text-sm">{company?.company_name ?? 'â€”'}</p>
-                        <p className="text-xs text-muted-foreground">{iv.position ?? 'â€”'}</p>
+                        <p className="font-medium text-sm">{company?.company_name ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground">{iv.position ?? '—'}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <p>{iv.start_date ? formatDate(iv.start_date) : 'â€”'}</p>
-                        {iv.end_date && <p className="text-muted-foreground">â†’ {formatDate(iv.end_date)}</p>}
+                        <p>{iv.start_date ? formatDate(iv.start_date) : '—'}</p>
+                        {iv.end_date && <p className="text-muted-foreground">→ {formatDate(iv.end_date)}</p>}
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {iv.allowance != null ? `${formatCurrency(iv.allowance)}/mo` : 'â€”'}
+                      {iv.allowance != null ? `${formatCurrency(iv.allowance)}/mo` : '—'}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{iv.tutor ?? 'â€”'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{iv.tutor ?? '—'}</TableCell>
                     <TableCell>
                       {iv.agreement_signed
                         ? <CheckCircle className="h-4 w-4 text-green-500" />

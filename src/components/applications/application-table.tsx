@@ -151,9 +151,9 @@ export function ApplicationTable({
                         </div>
                       </TableCell>
                     )}
-                    <TableCell className="font-medium">{a.company?.company_name ?? 'â€”'}</TableCell>
+                    <TableCell className="font-medium">{a.company?.company_name ?? '—'}</TableCell>
                     <TableCell className="text-sm">
-                      {a.position?.position_name ?? 'â€”'}
+                      {a.position?.position_name ?? '—'}
                       {(a.position as any)?.intake_date && (
                         <span className="block text-xs text-muted-foreground">
                           {new Date((a.position as any).intake_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}

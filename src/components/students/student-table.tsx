@@ -171,7 +171,7 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleCreateAllLogins} disabled={creatingAllLogins}>
                     <Users className="mr-2 h-4 w-4" />
-                    {creatingAllLogins ? 'Creatingâ€¦' : 'Create Logins for All Students'}
+                    {creatingAllLogins ? 'Creating…' : 'Create Logins for All Students'}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -306,7 +306,7 @@ export function StudentTable({ students, classes, generations, role, studentIdsW
                                 <UserPlus className="mr-2 h-4 w-4" />
                                 {studentIdsWithAccount.has(enrichedStudent.id)
                                   ? 'Reset Password to Default'
-                                  : creatingLoginFor === enrichedStudent.id ? 'Creatingâ€¦' : 'Create Login'}
+                                  : creatingLoginFor === enrichedStudent.id ? 'Creating…' : 'Create Login'}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />

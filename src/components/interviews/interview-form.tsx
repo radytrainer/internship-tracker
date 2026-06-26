@@ -76,7 +76,7 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
   }
 
   const getAppLabel = (a: ApplicationOption) =>
-    `${a.student?.first_name ?? ''} ${a.student?.last_name ?? ''} â€” ${a.company?.company_name ?? ''} / ${a.position?.position_name ?? ''}`
+    `${a.student?.first_name ?? ''} ${a.student?.last_name ?? ''} — ${a.company?.company_name ?? ''} / ${a.position?.position_name ?? ''}`
 
   // students who already accepted a placement don't need another interview scheduled,
   // but keep the currently-linked application selectable when editing

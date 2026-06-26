@@ -172,7 +172,7 @@ export function ApplicationForm({
                       {filteredPositions.map(position => (
                         <SelectItem key={position.id} value={position.id}>
                           {position.position_name}
-                          {position.intake_date && ` â€” ${new Date(position.intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`}
+                          {position.intake_date && ` — ${new Date(position.intake_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}`}
                           {` (max ${position.max_students})`}
                         </SelectItem>
                       ))}

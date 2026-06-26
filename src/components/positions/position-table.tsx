@@ -134,10 +134,10 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
                         {p.position_type ?? 'Internship'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{p.company?.company_name ?? 'â€”'}</TableCell>
+                    <TableCell>{p.company?.company_name ?? '—'}</TableCell>
                     <TableCell className="text-sm whitespace-nowrap">
                       <span className={overdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}>
-                        {fmtIntake(p.intake_date) ?? 'â€”'}
+                        {fmtIntake(p.intake_date) ?? '—'}
                       </span>
                       {overdue && <span className="ml-1.5 text-[10px] font-semibold text-red-500 uppercase tracking-wide">Overdue</span>}
                     </TableCell>
@@ -153,7 +153,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{p.description ?? 'â€”'}</TableCell>
+                    <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{p.description ?? '—'}</TableCell>
                     {canManage && (
                       <TableCell>
                         <DropdownMenu>

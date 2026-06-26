@@ -139,8 +139,8 @@ export function InterviewTable({ interviews, applications, companies, role }: In
                   )}
                   <TableCell>
                     <div>
-                      <p className="font-medium text-sm">{iv.application?.company?.company_name ?? 'â€”'}</p>
-                      <p className="text-xs text-muted-foreground">{iv.application?.position?.position_name ?? 'â€”'}</p>
+                      <p className="font-medium text-sm">{iv.application?.company?.company_name ?? '—'}</p>
+                      <p className="text-xs text-muted-foreground">{iv.application?.position?.position_name ?? '—'}</p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -162,7 +162,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
                       {iv.interview_type}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{iv.interviewer ?? 'â€”'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{iv.interviewer ?? '—'}</TableCell>
                   <TableCell>
                     <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', RESULT_COLORS[iv.result] ?? 'bg-muted text-muted-foreground')}>
                       {iv.result}
