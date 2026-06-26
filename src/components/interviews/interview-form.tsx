@@ -78,6 +78,12 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
   const getAppLabel = (a: ApplicationOption) =>
     `${a.student?.first_name ?? ''} ${a.student?.last_name ?? ''} â€” ${a.company?.company_name ?? ''} / ${a.position?.position_name ?? ''}`
 
+  // students who already accepted a placement don't need another interview scheduled,
+  // but keep the currently-linked application selectable when editing
+  const applicationOptions = applications.filter((a: ApplicationOption) =>
+    a.application_status !== 'Accepted' || a.id === interview?.application_id
+  )
+
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -90,7 +96,7 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select application" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {applications.map((a: ApplicationOption) => (
+                    {applicationOptions.map((a: ApplicationOption) => (
                       <SelectItem key={a.id} value={a.id}>{getAppLabel(a)}</SelectItem>
                     ))}
                   </SelectContent>
