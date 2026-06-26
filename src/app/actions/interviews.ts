@@ -18,6 +18,38 @@ const interviewSchema = z.object({
 
 export type InterviewFormData = z.infer<typeof interviewSchema>
 
+async function ensureInternshipFromPassedInterview(applicationId: string) {
+  const supabase = createAdminClient()
+  const { data: app } = await supabase
+    .from('internship_applications')
+    .select('student_id, company_id, position:company_positions(position_name)')
+    .eq('id', applicationId)
+    .single()
+  if (!app) return
+
+  const { data: existing } = await supabase
+    .from('internships')
+    .select('id')
+    .eq('student_id', app.student_id)
+    .eq('company_id', app.company_id)
+    .maybeSingle()
+  if (existing) return
+
+  const position = app.position as { position_name: string } | { position_name: string }[] | null
+  const positionName = Array.isArray(position) ? position[0]?.position_name : position?.position_name
+
+  await supabase.from('internships').insert({
+    student_id: app.student_id,
+    company_id: app.company_id,
+    position: positionName ?? '',
+    internship_status: 'Active',
+  })
+
+  await supabase.from('students').update({ status: 'Internship Active' }).eq('id', app.student_id)
+
+  revalidatePath('/internships')
+}
+
 export async function createInterview(data: InterviewFormData) {
   const { role, profile } = await getCurrentProfile()
   if (!role) return { success: false, error: 'Permission denied.' }
@@ -56,6 +88,10 @@ export async function createInterview(data: InterviewFormData) {
     await supabase.from('students').update({ status: 'Interview Scheduled' }).eq('id', app.student_id)
   }
 
+  if (parsed.data.result === 'Passed') {
+    await ensureInternshipFromPassedInterview(parsed.data.application_id)
+  }
+
   revalidatePath('/interviews')
   revalidatePath('/applications')
   revalidatePath('/dashboard')
@@ -78,6 +114,7 @@ export async function updateInterview(id: string, data: Partial<InterviewFormDat
     if (data.result === 'Passed') {
       const { data: app } = await supabase.from('internship_applications').select('student_id').eq('id', data.application_id).single()
       if (app) await supabase.from('students').update({ status: 'Interview Scheduled' }).eq('id', app.student_id)
+      await ensureInternshipFromPassedInterview(data.application_id)
     }
   }
 

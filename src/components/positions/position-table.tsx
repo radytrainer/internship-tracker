@@ -35,6 +35,10 @@ function isOverDeadline(date: string | null | undefined) {
   return new Date(date) < new Date(new Date().toDateString())
 }
 
+function isFull(p: AnyRecord) {
+  return (p._current_applications ?? 0) >= p.max_students
+}
+
 export function PositionTable({ positions, companies, role }: PositionTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -54,13 +58,9 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
       const matchCompany = filterCompany === 'all' || p.company_id === filterCompany
       return matchSearch && matchCompany
     })
-    // overdue positions sink to the bottom
-    return results.sort((a, b) => {
-      const aOver = isOverDeadline(a.intake_date)
-      const bOver = isOverDeadline(b.intake_date)
-      if (aOver === bOver) return 0
-      return aOver ? 1 : -1
-    })
+    // full positions sink below active ones, expired positions sink to the very bottom
+    const rank = (p: AnyRecord) => isOverDeadline(p.intake_date) ? 2 : isFull(p) ? 1 : 0
+    return results.sort((a, b) => rank(a) - rank(b))
   }, [positions, search, filterCompany])
 
   const handleDelete = async () => {
@@ -120,6 +120,7 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
               filtered.map(pos => {
                 const p = pos as AnyRecord
                 const overdue = isOverDeadline(p.intake_date)
+                const full = isFull(p)
                 return (
                   <TableRow key={p.id} className={overdue ? 'bg-red-50 dark:bg-red-950/20 opacity-70' : ''}>
                     <TableCell className="font-medium">{p.position_name}</TableCell>
@@ -142,9 +143,15 @@ export function PositionTable({ positions, companies, role }: PositionTableProps
                     </TableCell>
                     <TableCell><Badge variant="outline">{p.max_students} students</Badge></TableCell>
                     <TableCell>
-                      <Badge variant={p.is_active ? 'default' : 'secondary'} className={p.is_active ? 'bg-green-500' : ''}>
-                        {p.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
+                      {overdue ? (
+                        <Badge variant="secondary" className="bg-gray-400 text-white hover:bg-gray-400">Expired</Badge>
+                      ) : full ? (
+                        <Badge variant="secondary" className="bg-amber-500 text-white hover:bg-amber-500">Full</Badge>
+                      ) : (
+                        <Badge variant={p.is_active ? 'default' : 'secondary'} className={p.is_active ? 'bg-green-500' : ''}>
+                          {p.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-sm text-muted-foreground">{p.description ?? 'â€”'}</TableCell>
                     {canManage && (
