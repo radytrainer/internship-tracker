@@ -62,6 +62,10 @@ export function ApplicationTable({
     const matchStatus = filterStatus === 'all' || a.application_status === filterStatus
     const matchCompany = filterCompany === 'all' || a.company_id === filterCompany
     return matchSearch && matchStatus && matchCompany
+  }).sort((a, b) => {
+    // students who already passed/secured the internship or job sink to the bottom
+    const rank = (s: string) => s === 'Accepted' || s === 'Interview Passed' ? 1 : 0
+    return rank(a.application_status) - rank(b.application_status)
   }), [applications, search, filterStatus, filterCompany])
 
   const handleDelete = async () => {

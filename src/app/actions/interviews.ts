@@ -22,32 +22,55 @@ async function ensureInternshipFromPassedInterview(applicationId: string) {
   const supabase = createAdminClient()
   const { data: app } = await supabase
     .from('internship_applications')
-    .select('student_id, company_id, position:company_positions(position_name)')
+    .select('student_id, company_id, position:company_positions(position_name, position_type), company:companies(company_name)')
     .eq('id', applicationId)
     .single()
   if (!app) return
 
-  const { data: existing } = await supabase
-    .from('internships')
-    .select('id')
-    .eq('student_id', app.student_id)
-    .eq('company_id', app.company_id)
-    .maybeSingle()
-  if (existing) return
+  const position = app.position as { position_name: string; position_type: string } | { position_name: string; position_type: string }[] | null
+  const positionData = Array.isArray(position) ? position[0] : position
+  const company = app.company as { company_name: string } | { company_name: string }[] | null
+  const companyName = (Array.isArray(company) ? company[0]?.company_name : company?.company_name) ?? ''
 
-  const position = app.position as { position_name: string } | { position_name: string }[] | null
-  const positionName = Array.isArray(position) ? position[0]?.position_name : position?.position_name
+  if (positionData?.position_type === 'Full-Time Job') {
+    const { data: existing } = await supabase
+      .from('employment_records')
+      .select('id')
+      .eq('student_id', app.student_id)
+      .eq('company_name', companyName)
+      .maybeSingle()
+    if (!existing) {
+      await supabase.from('employment_records').insert({
+        student_id: app.student_id,
+        company_name: companyName,
+        position: positionData?.position_name ?? '',
+        employment_type: 'Full-Time',
+        employment_status: 'Active',
+      })
+      await supabase.from('students').update({ status: 'Employed' }).eq('id', app.student_id)
+      revalidatePath('/employment')
+    }
+  } else {
+    const { data: existing } = await supabase
+      .from('internships')
+      .select('id')
+      .eq('student_id', app.student_id)
+      .eq('company_id', app.company_id)
+      .maybeSingle()
+    if (!existing) {
+      await supabase.from('internships').insert({
+        student_id: app.student_id,
+        company_id: app.company_id,
+        position: positionData?.position_name ?? '',
+        internship_status: 'Active',
+      })
+      await supabase.from('students').update({ status: 'Internship Active' }).eq('id', app.student_id)
+      revalidatePath('/internships')
+    }
+  }
 
-  await supabase.from('internships').insert({
-    student_id: app.student_id,
-    company_id: app.company_id,
-    position: positionName ?? '',
-    internship_status: 'Active',
-  })
-
-  await supabase.from('students').update({ status: 'Internship Active' }).eq('id', app.student_id)
-
-  revalidatePath('/internships')
+  await supabase.from('internship_applications').update({ application_status: 'Accepted' }).eq('id', applicationId)
+  revalidatePath('/applications')
 }
 
 export async function createInterview(data: InterviewFormData) {
