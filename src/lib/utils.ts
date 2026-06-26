@@ -73,3 +73,22 @@ export const LEAVE_STATUS_COLORS: Record<string, string> = {
   'Approved': 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   'Rejected': 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
 }
+
+// students keep this much of their monthly internship allowance; the rest goes to the school
+export const STUDENT_ALLOWANCE_KEEP = 110
+// students pay the school for at most this many months, even on a longer internship
+export const MAX_ALLOWANCE_MONTHS = 4
+
+export function internshipAllowanceMonthCap(start: string | null | undefined, end: string | null | undefined) {
+  if (!start || !end) return MAX_ALLOWANCE_MONTHS
+  const s = parseISO(start)
+  const e = parseISO(end)
+  if (!isValid(s) || !isValid(e) || e <= s) return MAX_ALLOWANCE_MONTHS
+  let months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth())
+  if (e.getDate() > s.getDate()) months += 1
+  return Math.min(MAX_ALLOWANCE_MONTHS, Math.max(1, months))
+}
+
+export function schoolAllowanceShare(monthlyAllowance: number | null | undefined) {
+  return Math.max(0, (monthlyAllowance ?? 0) - STUDENT_ALLOWANCE_KEEP)
+}

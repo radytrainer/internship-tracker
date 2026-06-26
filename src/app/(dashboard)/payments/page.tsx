@@ -22,7 +22,7 @@ export default async function PaymentsPage() {
       .order('first_name'),
     admin
       .from('internships')
-      .select('id, student_id, position, allowance, company:companies(company_name)')
+      .select('id, student_id, position, allowance, start_date, end_date, company:companies(company_name)')
       .order('created_at', { ascending: false }),
     admin
       .from('employment_records')

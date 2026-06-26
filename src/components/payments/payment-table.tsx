@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet } from 'lucide-react'
 import { createPayment, updatePayment, deletePayment, type PaymentFormData } from '@/app/actions/payments'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate, formatCurrency, internshipAllowanceMonthCap, schoolAllowanceShare, STUDENT_ALLOWANCE_KEEP } from '@/lib/utils'
 import { toast } from 'sonner'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,8 +38,8 @@ function monthLabel(key: string) {
   return format(parseISO(`${key}-01`), 'MMMM yyyy')
 }
 
-function PaymentFormDialog({ open, onClose, payment, students, internships, employmentRecords }: {
-  open: boolean; onClose: () => void; payment: AnyRecord | null; students: AnyRecord[]; internships: AnyRecord[]; employmentRecords: AnyRecord[]
+function PaymentFormDialog({ open, onClose, payment, students, internships, employmentRecords, payments }: {
+  open: boolean; onClose: () => void; payment: AnyRecord | null; students: AnyRecord[]; internships: AnyRecord[]; employmentRecords: AnyRecord[]; payments: AnyRecord[]
 }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
@@ -55,6 +55,14 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
 
   const studentInternships = internships.filter(i => i.student_id === form.student_id)
   const studentEmploymentRecords = employmentRecords.filter(e => e.student_id === form.student_id)
+
+  const selectedInternship = internships.find(i => i.id === form.internship_id) ?? null
+  const allowanceCap = selectedInternship ? internshipAllowanceMonthCap(selectedInternship.start_date, selectedInternship.end_date) : null
+  const schoolAmount = selectedInternship ? schoolAllowanceShare(selectedInternship.allowance) : null
+  const monthsUsed = selectedInternship
+    ? payments.filter(p => p.internship_id === selectedInternship.id && p.id !== payment?.id).length
+    : 0
+  const capReached = allowanceCap != null && monthsUsed >= allowanceCap
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -88,7 +96,16 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
             <label className="text-sm font-medium">Internship (optional)</label>
             <Select
               value={form.internship_id ?? 'none'}
-              onValueChange={v => setForm(f => ({ ...f, internship_id: v === 'none' ? null : v, employment_id: v === 'none' ? f.employment_id : null }))}
+              onValueChange={v => {
+                const internshipId = v === 'none' ? null : v
+                const inter = internshipId ? internships.find(i => i.id === internshipId) ?? null : null
+                setForm(f => ({
+                  ...f,
+                  internship_id: internshipId,
+                  employment_id: internshipId ? null : f.employment_id,
+                  amount: inter ? schoolAllowanceShare(inter.allowance) : f.amount,
+                }))
+              }}
               disabled={!form.student_id || studentInternships.length === 0}
             >
               <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
@@ -101,6 +118,13 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
                 ))}
               </SelectContent>
             </Select>
+            {selectedInternship && (
+              <p className={`text-xs ${capReached ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                Student keeps {formatCurrency(STUDENT_ALLOWANCE_KEEP)} of {formatCurrency(selectedInternship.allowance)}/mo — {formatCurrency(schoolAmount)}/mo goes to the school.
+                {' '}{monthsUsed} of {allowanceCap} month{allowanceCap === 1 ? '' : 's'} recorded.
+                {capReached && ' This internship has reached its allowance payment limit.'}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -125,7 +149,12 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Amount (USD) *</label>
-              <Input type="number" min={0} step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: Number(e.target.value) }))} required />
+              <Input
+                type="number" min={0} step="0.01" value={selectedInternship ? schoolAmount ?? 0 : form.amount}
+                onChange={e => setForm(f => ({ ...f, amount: Number(e.target.value) }))}
+                disabled={!!selectedInternship}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Date *</label>
@@ -145,7 +174,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={saving || !form.student_id || form.amount <= 0}>
+            <Button type="submit" disabled={saving || !form.student_id || (selectedInternship ? (schoolAmount ?? 0) <= 0 : form.amount <= 0) || capReached}>
               {saving ? 'Saving…' : payment ? 'Save Changes' : 'Confirm Payment'}
             </Button>
           </DialogFooter>
@@ -305,6 +334,7 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         students={students}
         internships={internships}
         employmentRecords={employmentRecords}
+        payments={payments}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
