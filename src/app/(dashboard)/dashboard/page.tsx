@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentProfile } from '@/lib/auth/server'
 import { KPICards } from '@/components/dashboard/kpi-cards'
+import { NotAppliedStudentsCard } from '@/components/dashboard/not-applied-students-card'
 import { FunnelChart } from '@/components/dashboard/funnel-chart'
 import { GenderChart } from '@/components/dashboard/gender-chart'
 import { GenerationChart } from '@/components/dashboard/generation-chart'
@@ -54,8 +55,8 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MetricCard label="Allowance Paid This Month" value={formatCurrency(totalThisMonth)} hint={`${paymentsThisMonth.length} payment${paymentsThisMonth.length !== 1 ? 's' : ''} confirmed`} icon={Wallet} />
-          <MetricCard label="Allowance Paid All-Time" value={formatCurrency(totalAllTime)} hint={`${payments.length} payment${payments.length !== 1 ? 's' : ''} total`} icon={Wallet} />
+          <MetricCard label="Allowance Paid This Month" value={formatCurrency(totalThisMonth)} hint={`${paymentsThisMonth.length} payment${paymentsThisMonth.length !== 1 ? 's' : ''} confirmed`} icon={Wallet} color="text-teal-600" bg="bg-teal-50 dark:bg-teal-950/30" />
+          <MetricCard label="Allowance Paid All-Time" value={formatCurrency(totalAllTime)} hint={`${payments.length} payment${payments.length !== 1 ? 's' : ''} total`} icon={Wallet} color="text-indigo-600" bg="bg-indigo-50 dark:bg-indigo-950/30" />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
@@ -365,8 +366,8 @@ export default async function DashboardPage() {
   }
 
   if (role === 'trainer') {
-    const [{ count: totalStudents }, { count: totalApplications }, { count: pendingInterviews }, { data: topCompanies }, { data: topPositions }, { data: upcomingInterviews }, { data: recentApplications }] = await Promise.all([
-      supabase.from('students').select('*', { count: 'exact', head: true }),
+    const [{ data: studentRows }, { count: totalApplications }, { count: pendingInterviews }, { data: topCompanies }, { data: topPositions }, { data: upcomingInterviews }, { data: recentApplications }, { data: applicantRows }] = await Promise.all([
+      supabase.from('students').select('id, first_name, last_name, gender, class:classes(name)'),
       supabase.from('internship_applications').select('*', { count: 'exact', head: true }),
       supabase.from('interviews').select('*', { count: 'exact', head: true }).eq('result', 'Pending'),
       supabase
@@ -388,7 +389,21 @@ export default async function DashboardPage() {
         .select('id, application_date, student:students(first_name, last_name), company:companies(company_name), position:company_positions(position_name), application_status')
         .order('application_date', { ascending: false })
         .limit(8),
+      supabase.from('internship_applications').select('student_id'),
     ])
+
+    const totalStudents = studentRows?.length ?? 0
+    const appliedStudentIds = new Set((applicantRows ?? []).map(r => r.student_id))
+    const appliedStudentCount = appliedStudentIds.size
+    const notAppliedStudents = (studentRows ?? [])
+      .filter(s => !appliedStudentIds.has(s.id))
+      .map(s => ({
+        id: s.id,
+        first_name: s.first_name,
+        last_name: s.last_name,
+        gender: s.gender,
+        className: one(s.class as { name: string }[] | { name: string } | null)?.name ?? null,
+      }))
 
     const topCompanyData = summarizeByKey(topCompanies ?? [], item => one(item.company)?.company_name ?? 'Unknown company')
       .slice(0, 6)
@@ -405,10 +420,12 @@ export default async function DashboardPage() {
 
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <MetricCard label="Students in pipeline" value={totalStudents ?? 0} hint="All students you can monitor" icon={UserRound} />
-          <MetricCard label="Applications logged" value={totalApplications ?? 0} hint="Across all companies and positions" icon={Briefcase} />
-          <MetricCard label="Pending interviews" value={pendingInterviews ?? 0} hint="Upcoming actions to track" icon={Clock} />
+        <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
+          <MetricCard label="Students in pipeline" value={totalStudents ?? 0} hint="All students you can monitor" icon={UserRound} color="text-blue-600" bg="bg-blue-50 dark:bg-blue-950/30" />
+          <MetricCard label="Applications logged" value={totalApplications ?? 0} hint="Across all companies and positions" icon={Briefcase} color="text-violet-600" bg="bg-violet-50 dark:bg-violet-950/30" />
+          <MetricCard label="Pending interviews" value={pendingInterviews ?? 0} hint="Upcoming actions to track" icon={Clock} color="text-amber-600" bg="bg-amber-50 dark:bg-amber-950/30" />
+          <NotAppliedStudentsCard students={notAppliedStudents} />
+          <MetricCard label="Already applied" value={appliedStudentCount} hint="Unique students with at least one application" icon={CheckCircle2} color="text-green-600" bg="bg-green-50 dark:bg-green-950/30" />
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -515,40 +532,94 @@ export default async function DashboardPage() {
     )
   }
 
-  const { data: kpis } = await supabase.rpc('get_dashboard_kpis')
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  const { data: genderRaw } = await supabase.from('students').select('gender')
+  // All of these are independent of one another — fire them together instead of
+  // awaiting one at a time, which was serializing ~11 round trips per page load.
+  const [
+    { data: kpis },
+    { data: genderRaw },
+    { data: generations },
+    { data: studentsForGenerations },
+    { data: appRows },
+    { data: internshipRows },
+    { data: employmentRows },
+    { data: companies },
+    { data: internshipsRaw },
+    { data: employmentRaw },
+    { data: applicationGenderRaw },
+    { data: upcomingInterviews },
+    { data: noJobStudents },
+    { count: interviewsFailedCount },
+  ] = await Promise.all([
+    supabase.rpc('get_dashboard_kpis'),
+    supabase.from('students').select('gender'),
+    supabase.from('generations').select('id, name').order('year'),
+    supabase.from('students').select('id, generation_id').not('generation_id', 'is', null),
+    supabase.from('internship_applications').select('student_id'),
+    supabase.from('internships').select('student_id, company_id'),
+    supabase.from('employment_records').select('student_id'),
+    supabase
+      .from('companies')
+      .select('id, company_name, internship_applications(count), internships(count)')
+      .limit(10),
+    supabase
+      .from('internships')
+      .select('allowance, companies(company_name), students(gender)')
+      .not('allowance', 'is', null),
+    supabase
+      .from('employment_records')
+      .select('salary, company_name, students(gender)')
+      .not('salary', 'is', null),
+    supabase
+      .from('internship_applications')
+      .select('position:company_positions(position_name), student:students(gender)'),
+    supabase
+      .from('interviews')
+      .select('*, internship_applications(student_id, students(first_name, last_name), companies(company_name))')
+      .eq('interview_date', tomorrowStr)
+      .eq('result', 'Pending')
+      .limit(5),
+    supabase.from('students').select('id, first_name, last_name, status').eq('status', 'Looking For Job').limit(5),
+    supabase.from('interviews').select('*', { count: 'exact', head: true }).eq('result', 'Failed'),
+  ])
+
+  const companiesWithInternshipCount = new Set((internshipRows ?? []).map(r => r.company_id)).size
+  const kpisWithExtras = kpis
+    ? { ...kpis, interviews_failed: interviewsFailedCount ?? 0, companies_with_internship: companiesWithInternshipCount }
+    : kpis
+
   const genderMap: Record<string, number> = {}
   for (const student of genderRaw ?? []) {
     genderMap[student.gender] = (genderMap[student.gender] ?? 0) + 1
   }
   const genderData = Object.entries(genderMap).map(([gender, count]) => ({ gender, count }))
 
-  const { data: generations } = await supabase.from('generations').select('id, name').order('year')
-  const generationData = await Promise.all(
-    (generations ?? []).map(async generation => {
-      const { data: generationStudents } = await supabase.from('students').select('id').eq('generation_id', generation.id)
-      const studentIds = generationStudents?.map(item => item.id) ?? []
+  const generationList = generations ?? []
+  const studentGenerationMap = new Map((studentsForGenerations ?? []).map(s => [s.id, s.generation_id]))
 
-      const [{ count: appCount }, { count: internshipCount }, { count: employmentCount }] = await Promise.all([
-        supabase.from('internship_applications').select('*', { count: 'exact', head: true }).in('student_id', studentIds),
-        supabase.from('internships').select('*', { count: 'exact', head: true }).in('student_id', studentIds),
-        supabase.from('employment_records').select('*', { count: 'exact', head: true }).in('student_id', studentIds),
-      ])
+  const countByGeneration = (rows: { student_id: string | null }[] | null) => {
+    const counts = new Map<string, number>()
+    for (const row of rows ?? []) {
+      const generationId = row.student_id ? studentGenerationMap.get(row.student_id) : null
+      if (!generationId) continue
+      counts.set(generationId, (counts.get(generationId) ?? 0) + 1)
+    }
+    return counts
+  }
 
-      return {
-        generation: generation.name.replace('Generation ', 'Gen '),
-        applications: appCount ?? 0,
-        internships: internshipCount ?? 0,
-        employed: employmentCount ?? 0,
-      }
-    })
-  )
+  const appCounts = countByGeneration(appRows)
+  const internshipCounts = countByGeneration(internshipRows)
+  const employmentCounts = countByGeneration(employmentRows)
 
-  const { data: companies } = await supabase
-    .from('companies')
-    .select('id, company_name, internship_applications(count), internships(count)')
-    .limit(10)
+  const generationData = generationList.map(generation => ({
+    generation: generation.name.replace('Generation ', 'Gen '),
+    applications: appCounts.get(generation.id) ?? 0,
+    internships: internshipCounts.get(generation.id) ?? 0,
+    employed: employmentCounts.get(generation.id) ?? 0,
+  }))
 
   const companyPerf = (companies ?? []).map((company: Record<string, unknown>) => ({
     id: company.id as string,
@@ -557,11 +628,6 @@ export default async function DashboardPage() {
     internship_count: (company.internships as { count: number }[])?.[0]?.count ?? 0,
     employed_count: 0,
   })).sort((a, b) => b.application_count - a.application_count)
-
-  const { data: internshipsRaw } = await supabase
-    .from('internships')
-    .select('allowance, companies(company_name), students(gender)')
-    .not('allowance', 'is', null)
 
   const allowanceByCompany = buildStatsByGroup(
     internshipsRaw ?? [],
@@ -577,11 +643,6 @@ export default async function DashboardPage() {
     ? Math.round((internshipsRaw as { allowance: number }[]).reduce((sum, row) => sum + (row.allowance ?? 0), 0) / internshipsRaw.length)
     : 0
 
-  const { data: employmentRaw } = await supabase
-    .from('employment_records')
-    .select('salary, company_name, students(gender)')
-    .not('salary', 'is', null)
-
   const salaryByCompany = buildStatsByGroup(
     employmentRaw ?? [],
     row => row.company_name as string,
@@ -596,10 +657,6 @@ export default async function DashboardPage() {
     ? Math.round((employmentRaw as { salary: number }[]).reduce((sum, row) => sum + (row.salary ?? 0), 0) / employmentRaw.length)
     : 0
 
-  const { data: applicationGenderRaw } = await supabase
-    .from('internship_applications')
-    .select('position:company_positions(position_name), student:students(gender)')
-
   const applicationsByPositionGender = buildGenderCountsByGroup(
     (applicationGenderRaw ?? []).map(row => ({
       group: one(row.position as { position_name: string }[] | { position_name: string } | null)?.position_name ?? 'Unknown',
@@ -607,26 +664,9 @@ export default async function DashboardPage() {
     }))
   )
 
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const tomorrowStr = tomorrow.toISOString().split('T')[0]
-
-  const { data: upcomingInterviews } = await supabase
-    .from('interviews')
-    .select('*, internship_applications(student_id, students(first_name, last_name), companies(company_name))')
-    .eq('interview_date', tomorrowStr)
-    .eq('result', 'Pending')
-    .limit(5)
-
-  const { data: noJobStudents } = await supabase
-    .from('students')
-    .select('id, first_name, last_name, status')
-    .eq('status', 'Looking For Job')
-    .limit(5)
-
   return (
     <div className="space-y-6">
-      <KPICards kpis={kpis} />
+      <KPICards kpis={kpisWithExtras} />
 
       {((upcomingInterviews?.length ?? 0) > 0 || (noJobStudents?.length ?? 0) > 0) && (
         <div className="grid gap-4 md:grid-cols-2">
@@ -708,22 +748,26 @@ function MetricCard({
   value,
   hint,
   icon: Icon,
+  color = 'text-foreground',
+  bg = 'bg-card',
 }: {
   label: string
   value: number | string
   hint: string
   icon: typeof UserRound
+  color?: string
+  bg?: string
 }) {
   return (
-    <Card>
+    <Card className={`border-none ${bg}`}>
       <CardContent className="flex items-center justify-between p-5">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="mt-1 text-2xl font-semibold">{value}</p>
+          <p className={`mt-1 text-2xl font-semibold ${color}`}>{value}</p>
           <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
         </div>
-        <div className="rounded-2xl bg-muted p-3">
-          <Icon className="h-5 w-5 text-muted-foreground" />
+        <div className="rounded-2xl bg-white/60 dark:bg-white/10 p-3">
+          <Icon className={`h-5 w-5 ${color}`} />
         </div>
       </CardContent>
     </Card>

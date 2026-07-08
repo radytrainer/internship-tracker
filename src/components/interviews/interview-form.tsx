@@ -34,10 +34,10 @@ type ApplicationOption = any
 
 interface InterviewFormProps {
   open: boolean; onClose: () => void; interview: Interview | null
-  applications: ApplicationOption[]; role?: AppRole
+  applications: ApplicationOption[]; interviews?: ApplicationOption[]; role?: AppRole
 }
 
-export function InterviewForm({ open, onClose, interview, applications, role }: InterviewFormProps) {
+export function InterviewForm({ open, onClose, interview, applications, interviews = [], role }: InterviewFormProps) {
   const isStudent = role === 'student'
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -78,11 +78,18 @@ export function InterviewForm({ open, onClose, interview, applications, role }: 
   const getAppLabel = (a: ApplicationOption) =>
     `${a.student?.first_name ?? ''} ${a.student?.last_name ?? ''} — ${a.company?.company_name ?? ''} / ${a.position?.position_name ?? ''}`
 
-  // students who already accepted a placement don't need another interview scheduled,
-  // but keep the currently-linked application selectable when editing
-  const applicationOptions = applications.filter((a: ApplicationOption) =>
-    a.application_status !== 'Accepted' || a.id === interview?.application_id
-  )
+  // hide applications whose student already has an interview (any result) with
+  // the same company — a different company for the same student is still fine
+  const applicationOptions = applications.filter((a: ApplicationOption) => {
+    if (a.id === interview?.application_id) return true
+    if (a.application_status === 'Accepted') return false
+    const alreadyInterviewedForCompany = interviews.some((iv: ApplicationOption) =>
+      iv.id !== interview?.id &&
+      iv.application?.student_id === a.student_id &&
+      iv.application?.company_id === a.company_id
+    )
+    return !alreadyInterviewedForCompany
+  })
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>

@@ -1,11 +1,26 @@
 import 'server-only'
 
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizeRole, type AppRole } from '@/lib/roles'
 import type { Profile, UserRole } from '@/types/database.types'
 
 export async function getCurrentProfile() {
+  // Middleware already validated the session and fetched the profile for this
+  // request — reuse it instead of hitting Supabase auth + the profiles table again.
+  const headerList = await headers()
+  const forwardedProfile = headerList.get('x-profile')
+
+  if (forwardedProfile) {
+    const profile = JSON.parse(forwardedProfile) as Profile
+    return {
+      user: { id: profile.id },
+      profile,
+      role: normalizeRole(profile.role as UserRole | null | undefined),
+    }
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

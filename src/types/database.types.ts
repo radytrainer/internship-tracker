@@ -12,6 +12,8 @@ export type StudentStatus =
   | 'Internship Completed'
   | 'Looking For Job'
   | 'Employed'
+  | 'Eliminated'
+  | 'Waiting List'
 export type ApplicationStatus =
   | 'Applied'
   | 'Under Review'
@@ -244,6 +246,8 @@ export interface DashboardKPIs {
   internship_active: number
   internship_completed: number
   employed: number
+  interviews_failed: number
+  companies_with_internship: number
   total_companies: number
   total_applications: number
   interviews_scheduled: number

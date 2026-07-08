@@ -27,7 +27,8 @@ const schema = z.object({
   generation_id: z.string().uuid().optional().nullable(),
   status: z.enum([
     'Studying', 'Looking For Internship', 'Internship Applied', 'Interview Scheduled',
-    'Internship Accepted', 'Internship Active', 'Internship Completed', 'Looking For Job', 'Employed'
+    'Internship Accepted', 'Internship Active', 'Internship Completed', 'Looking For Job', 'Employed',
+    'Eliminated', 'Waiting List'
   ]),
   notes: z.string().optional().nullable(),
   avatar_url: z.string().url().optional().nullable().or(z.literal('')),
@@ -45,7 +46,8 @@ interface StudentFormProps {
 
 const STATUSES = [
   'Studying', 'Looking For Internship', 'Internship Applied', 'Interview Scheduled',
-  'Internship Accepted', 'Internship Active', 'Internship Completed', 'Looking For Job', 'Employed'
+  'Internship Accepted', 'Internship Active', 'Internship Completed', 'Looking For Job', 'Employed',
+  'Eliminated', 'Waiting List'
 ]
 
 export function StudentForm({ open, onClose, student, classes, generations }: StudentFormProps) {

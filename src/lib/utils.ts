@@ -38,6 +38,8 @@ export const STUDENT_STATUS_COLORS: Record<string, string> = {
   'Internship Completed': 'bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300',
   'Looking For Job': 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
   'Employed': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300',
+  'Eliminated': 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
+  'Waiting List': 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
 }
 
 export const APPLICATION_STATUS_COLORS: Record<string, string> = {

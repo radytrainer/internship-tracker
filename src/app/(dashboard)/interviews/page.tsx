@@ -27,7 +27,7 @@ export default async function InterviewsPage() {
 
   let interviewsQuery = admin
     .from('interviews')
-    .select('*, application:internship_applications(id, application_status, student_id, student:students(first_name, last_name, student_code), company:companies(company_name), position:company_positions(position_name))')
+    .select('*, application:internship_applications(id, application_status, student_id, company_id, student:students(first_name, last_name, student_code), company:companies(company_name), position:company_positions(position_name))')
     .order('interview_date', { ascending: false })
 
   let appsQuery = admin

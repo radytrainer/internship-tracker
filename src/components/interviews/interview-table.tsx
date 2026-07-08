@@ -219,6 +219,7 @@ export function InterviewTable({ interviews, applications, companies, role }: In
           onClose={() => { setFormOpen(false); setEditInterview(null); router.refresh() }}
           interview={editInterview}
           applications={applications}
+          interviews={interviews}
           role={role}
         />
       )}

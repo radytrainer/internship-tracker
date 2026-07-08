@@ -53,6 +53,34 @@ export function ReportsClient({ generations, students, applications, internships
     return Object.entries(counts).map(([name, value]) => ({ name, value }))
   }, [filteredStudents])
 
+  const statusGenderBreakdown = useMemo(() => {
+    const counts: Record<string, { male: number; female: number; other: number }> = {}
+    filteredStudents.forEach((s: AnyRecord) => {
+      if (!s.status) return
+      if (!counts[s.status]) counts[s.status] = { male: 0, female: 0, other: 0 }
+      const g = (s.gender ?? '').toLowerCase()
+      if (g === 'male' || g === 'm') counts[s.status].male++
+      else if (g === 'female' || g === 'f') counts[s.status].female++
+      else counts[s.status].other++
+    })
+    return Object.entries(counts).map(([status, { male, female, other }]) => ({
+      status, male, female, other, total: male + female + other,
+    }))
+  }, [filteredStudents])
+
+  const genderSummary = useMemo(() => {
+    let male = 0, female = 0
+    filteredStudents.forEach((s: AnyRecord) => {
+      const g = (s.gender ?? '').toLowerCase()
+      if (g === 'male' || g === 'm') male++
+      else if (g === 'female' || g === 'f') female++
+    })
+    return [
+      { name: 'Male', value: male },
+      { name: 'Female', value: female },
+    ]
+  }, [filteredStudents])
+
   const companyStats = useMemo(() => {
     const stats: Record<string, { name: string; applications: number; accepted: number; internships: number }> = {}
     applications.forEach((a: AnyRecord) => {
@@ -180,42 +208,73 @@ export function ReportsClient({ generations, students, applications, internships
         </TabsContent>
 
         <TabsContent value="status">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            {/* Gender by Status — grouped horizontal bar chart */}
             <Card>
-              <CardHeader><CardTitle>Status Distribution</CardTitle></CardHeader>
+              <CardHeader><CardTitle>Students by Status &amp; Gender</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie data={statusBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={120} paddingAngle={3} dataKey="value" nameKey="name"
-                      label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}>
-                      {statusBreakdown.map((_: AnyRecord, idx: number) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
+                <ResponsiveContainer width="100%" height={Math.max(320, statusGenderBreakdown.length * 52)}>
+                  <BarChart data={statusGenderBreakdown} layout="vertical" margin={{ top: 5, right: 40, left: 8, bottom: 5 }} barCategoryGap="30%">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <YAxis dataKey="status" type="category" width={172} tick={{ fontSize: 11 }} />
+                    <Tooltip contentStyle={{ borderRadius: '8px' }} />
+                    <Legend />
+                    <Bar dataKey="male" name="Male" fill="#3b82f6" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, fill: '#3b82f6' }} />
+                    <Bar dataKey="female" name="Female" fill="#ec4899" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 11, fill: '#ec4899' }} />
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader><CardTitle>Status Breakdown</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-3 mt-2">
-                  {statusBreakdown.map((item: { name: string; value: number }, idx: number) => (
-                    <div key={item.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full" style={{ background: COLORS[idx % COLORS.length] }} />
-                        <span className="text-sm">{item.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">{item.value}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({filteredStudents.length > 0 ? Math.round((item.value / filteredStudents.length) * 100) : 0}%)
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+
+            {/* Status distribution pie + overall gender donut */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader><CardTitle>Status Distribution</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie data={statusBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={110} paddingAngle={3} dataKey="value" nameKey="name"
+                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(1)}%`}>
+                        {statusBreakdown.map((_: AnyRecord, idx: number) => <Cell key={idx} fill={COLORS[idx % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Overall Gender Split</CardTitle></CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie data={genderSummary} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={4} dataKey="value" nameKey="name" label={false} labelLine={false}>
+                        <Cell fill="#3b82f6" />
+                        <Cell fill="#ec4899" />
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [`${value} students`, name]} contentStyle={{ borderRadius: '8px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex justify-center gap-8 mt-3">
+                    {genderSummary.map((g, i) => {
+                      const total = genderSummary.reduce((s, x) => s + x.value, 0)
+                      const pct = total > 0 ? Math.round((g.value / total) * 100) : 0
+                      return (
+                        <div key={g.name} className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-2 text-sm font-semibold">
+                            <div className="h-3 w-3 rounded-full" style={{ background: i === 0 ? '#3b82f6' : '#ec4899' }} />
+                            {g.name}
+                          </div>
+                          <span className="text-2xl font-bold" style={{ color: i === 0 ? '#3b82f6' : '#ec4899' }}>{g.value}</span>
+                          <span className="text-xs text-muted-foreground">{pct}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
 
