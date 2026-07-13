@@ -26,6 +26,17 @@ interface ReportsClientProps {
 
 const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
 
+function colorFromName(name: string) {
+  const colors = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#ef4444', '#22c55e']
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % colors.length
+  return colors[h]
+}
+
+function initials(name: string) {
+  return name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
+}
+
 export function ReportsClient({ generations, students, applications, internships, employment, companies }: ReportsClientProps) {
   const [filterGen, setFilterGen] = useState('all')
   const [companySheet, setCompanySheet] = useState<'mou' | 'non-mou' | null>(null)
@@ -146,14 +157,14 @@ export function ReportsClient({ generations, students, applications, internships
   const mouCompanyList = useMemo(() =>
     companies
       .filter((c: AnyRecord) => c.has_mou && (studentCountByCompany[c.id]?.size ?? 0) > 0)
-      .map((c: AnyRecord) => ({ id: c.id, name: c.company_name, studentCount: studentCountByCompany[c.id].size }))
+      .map((c: AnyRecord) => ({ id: c.id, name: c.company_name, logoUrl: c.logo_url as string | null, studentCount: studentCountByCompany[c.id].size }))
       .sort((a, b) => b.studentCount - a.studentCount),
     [companies, studentCountByCompany]
   )
   const nonMouCompanyList = useMemo(() =>
     companies
       .filter((c: AnyRecord) => !c.has_mou && (studentCountByCompany[c.id]?.size ?? 0) > 0)
-      .map((c: AnyRecord) => ({ id: c.id, name: c.company_name, studentCount: studentCountByCompany[c.id].size }))
+      .map((c: AnyRecord) => ({ id: c.id, name: c.company_name, logoUrl: c.logo_url as string | null, studentCount: studentCountByCompany[c.id].size }))
       .sort((a, b) => b.studentCount - a.studentCount),
     [companies, studentCountByCompany]
   )
@@ -164,11 +175,34 @@ export function ReportsClient({ generations, students, applications, internships
   const mouPlacedPct = mouCompanyIds.size > 0 ? Math.round((mouCompaniesPlaced / mouCompanyIds.size) * 100) : 0
   const nonMouPlacedPct = nonMouCompanyCount > 0 ? Math.round((nonMouCompaniesPlaced / nonMouCompanyCount) * 100) : 0
 
-  const activeCompanySheet = companySheet === 'mou'
-    ? { title: 'MOU Companies with Interns', description: 'Companies with a signed MOU that have taken on interns.', list: mouCompanyList }
-    : companySheet === 'non-mou'
-    ? { title: 'Non-MOU Companies with Interns', description: 'Companies without an MOU that have still taken on interns.', list: nonMouCompanyList }
-    : null
+  const companySheetConfig = {
+    'mou': {
+      title: 'MOU Companies with Interns',
+      description: 'Companies with a signed MOU that have taken on interns.',
+      list: mouCompanyList,
+      icon: ShieldCheck,
+      headerGradient: 'from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30',
+      iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      barColor: 'bg-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
+    },
+    'non-mou': {
+      title: 'Non-MOU Companies with Interns',
+      description: 'Companies without an MOU that have still taken on interns.',
+      list: nonMouCompanyList,
+      icon: Building2,
+      headerGradient: 'from-slate-50 to-gray-50 dark:from-slate-900/40 dark:to-gray-900/40',
+      iconBg: 'bg-slate-100 dark:bg-slate-800/60',
+      iconColor: 'text-slate-600 dark:text-slate-300',
+      barColor: 'bg-slate-500',
+      badgeClass: 'bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
+    },
+  } as const
+
+  const activeCompanySheet = companySheet ? companySheetConfig[companySheet] : null
+  const activeCompanyTotal = activeCompanySheet?.list.reduce((sum, c) => sum + c.studentCount, 0) ?? 0
+  const activeCompanyMax = Math.max(1, ...(activeCompanySheet?.list.map(c => c.studentCount) ?? [1]))
 
   // Distinct students who have found/secured an internship placement
   const studentsFoundInternship = useMemo(() =>
@@ -259,22 +293,58 @@ export function ReportsClient({ generations, students, applications, internships
 
       <Sheet open={companySheet !== null} onOpenChange={open => { if (!open) setCompanySheet(null) }}>
         <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col overflow-hidden">
-          <SheetHeader className="p-6 pb-4 border-b shrink-0">
-            <SheetTitle>{activeCompanySheet?.title} ({activeCompanySheet?.list.length ?? 0})</SheetTitle>
-            <SheetDescription>{activeCompanySheet?.description}</SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {!activeCompanySheet || activeCompanySheet.list.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-10">No companies found.</p>
-            ) : (
-              activeCompanySheet.list.map(c => (
-                <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <p className="font-medium truncate">{c.name}</p>
-                  <Badge variant="secondary">{c.studentCount} student{c.studentCount === 1 ? '' : 's'}</Badge>
+          {activeCompanySheet && (
+            <>
+              <SheetHeader className={cn('p-6 pb-4 border-b shrink-0 bg-gradient-to-r', activeCompanySheet.headerGradient)}>
+                <div className="flex items-center gap-3">
+                  <div className={cn('shrink-0 rounded-xl p-2.5', activeCompanySheet.iconBg)}>
+                    <activeCompanySheet.icon className={cn('h-5 w-5', activeCompanySheet.iconColor)} />
+                  </div>
+                  <div className="min-w-0">
+                    <SheetTitle>{activeCompanySheet.title}</SheetTitle>
+                    <SheetDescription className="mt-0.5">{activeCompanySheet.description}</SheetDescription>
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
+                <div className="flex items-center gap-4 pt-1 text-xs text-muted-foreground">
+                  <span><span className="font-semibold text-foreground">{activeCompanySheet.list.length}</span> companies</span>
+                  <span><span className="font-semibold text-foreground">{activeCompanyTotal}</span> students placed</span>
+                </div>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {activeCompanySheet.list.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-10">No companies found.</p>
+                ) : (
+                  activeCompanySheet.list.map(c => (
+                    <div key={c.id} className="flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted/50">
+                      {c.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.logoUrl} alt={c.name} className="h-11 w-11 rounded-xl object-cover shrink-0 ring-1 ring-border" />
+                      ) : (
+                        <div
+                          className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0 text-white text-sm font-bold"
+                          style={{ background: colorFromName(c.name) }}
+                        >
+                          {initials(c.name)}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{c.name}</p>
+                        <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={cn('h-full rounded-full', activeCompanySheet.barColor)}
+                            style={{ width: `${(c.studentCount / activeCompanyMax) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                      <Badge className={cn('shrink-0 border-transparent', activeCompanySheet.badgeClass)}>
+                        {c.studentCount} student{c.studentCount === 1 ? '' : 's'}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
 
