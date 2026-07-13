@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet, CheckCircle2 } from 'lucide-react'
 import { createPayment, updatePayment, deletePayment, type PaymentFormData } from '@/app/actions/payments'
 import { formatDate, formatCurrency, internshipAllowanceMonthCap, schoolAllowanceShare, STUDENT_ALLOWANCE_KEEP } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -120,9 +121,10 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
             </Select>
             {selectedInternship && (
               <p className={`text-xs ${capReached ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
-                Student keeps {formatCurrency(STUDENT_ALLOWANCE_KEEP)} of {formatCurrency(selectedInternship.allowance)}/mo — {formatCurrency(schoolAmount)}/mo goes to the school.
+                Student keeps {formatCurrency(STUDENT_ALLOWANCE_KEEP)} of {formatCurrency(selectedInternship.allowance)}/mo — up to {formatCurrency(schoolAmount)}/mo can go to the school.
                 {' '}{monthsUsed} of {allowanceCap} month{allowanceCap === 1 ? '' : 's'} recorded.
                 {capReached && ' This internship has reached its allowance payment limit.'}
+                {!capReached && ' Lower the amount below if the student received a partial allowance this month.'}
               </p>
             )}
           </div>
@@ -150,9 +152,8 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Amount (USD) *</label>
               <Input
-                type="number" min={0} step="0.01" value={selectedInternship ? schoolAmount ?? 0 : form.amount}
+                type="number" min={0} max={selectedInternship ? schoolAmount ?? undefined : undefined} step="0.01" value={form.amount}
                 onChange={e => setForm(f => ({ ...f, amount: Number(e.target.value) }))}
-                disabled={!!selectedInternship}
                 required
               />
             </div>
@@ -174,7 +175,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={saving || !form.student_id || (selectedInternship ? (schoolAmount ?? 0) <= 0 : form.amount <= 0) || capReached}>
+            <Button type="submit" disabled={saving || !form.student_id || form.amount <= 0 || (selectedInternship ? form.amount > (schoolAmount ?? 0) : false) || capReached}>
               {saving ? 'Saving…' : payment ? 'Save Changes' : 'Confirm Payment'}
             </Button>
           </DialogFooter>
@@ -204,6 +205,59 @@ export function PaymentTable({ payments, students, internships, employmentRecord
   }, [payments])
 
   const [selectedMonth, setSelectedMonth] = useState(() => monthTotals[0]?.[0] ?? format(new Date(), 'yyyy-MM'))
+  const [rowAmounts, setRowAmounts] = useState<Record<string, number>>({})
+  const [rowDates, setRowDates] = useState<Record<string, string>>({})
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+
+  const dueMonth = selectedMonth === 'all' ? format(new Date(), 'yyyy-MM') : selectedMonth
+
+  const dueList = useMemo(() => {
+    return internships
+      .filter(i => i.allowance != null)
+      .map(i => {
+        const cap = internshipAllowanceMonthCap(i.start_date, i.end_date)
+        const internshipPayments = payments.filter(p => p.internship_id === i.id)
+        if (internshipPayments.length >= cap) return null
+        if (internshipPayments.some(p => monthKey(p.payment_date) === dueMonth)) return null
+        const student = students.find(s => s.id === i.student_id)
+        if (!student) return null
+        return {
+          internshipId: i.id as string,
+          studentId: i.student_id as string,
+          studentName: `${student.first_name} ${student.last_name}`,
+          studentCode: student.student_code as string,
+          companyName: i.company?.company_name ?? 'Unknown company',
+          position: i.position as string,
+          maxAmount: schoolAllowanceShare(i.allowance),
+          monthsPaid: internshipPayments.length,
+          cap,
+        }
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+  }, [internships, payments, students, dueMonth])
+
+  const handleQuickConfirm = async (row: (typeof dueList)[number]) => {
+    const amount = rowAmounts[row.internshipId] ?? row.maxAmount
+    if (amount <= 0 || amount > row.maxAmount) return
+    setConfirmingId(row.internshipId)
+    const result = await createPayment({
+      student_id: row.studentId,
+      internship_id: row.internshipId,
+      employment_id: null,
+      amount,
+      payment_date: rowDates[row.internshipId] ?? format(new Date(), 'yyyy-MM-dd'),
+      payment_time: '',
+      notes: '',
+    })
+    setConfirmingId(null)
+    if (result.error) toast.error(result.error)
+    else {
+      toast.success(`Payment confirmed for ${row.studentName}`)
+      setRowAmounts(a => { const next = { ...a }; delete next[row.internshipId]; return next })
+      setRowDates(d => { const next = { ...d }; delete next[row.internshipId]; return next })
+      router.refresh()
+    }
+  }
 
   const filtered = useMemo(() => payments.filter(p => {
     if (selectedMonth !== 'all' && monthKey(p.payment_date) !== selectedMonth) return false
@@ -263,6 +317,50 @@ export function PaymentTable({ payments, students, internships, employmentRecord
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-sm">Due for {monthLabel(dueMonth)}</h3>
+            <p className="text-xs text-muted-foreground">Internship students not yet paid this month — adjust the amount if they got a partial allowance, then confirm</p>
+          </div>
+          <Badge variant="secondary">{dueList.length}</Badge>
+        </div>
+        {dueList.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4 flex items-center justify-center gap-1.5">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />Everyone is paid up for this month
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {dueList.map(row => {
+              const amount = rowAmounts[row.internshipId] ?? row.maxAmount
+              const date = rowDates[row.internshipId] ?? format(new Date(), 'yyyy-MM-dd')
+              const invalid = amount <= 0 || amount > row.maxAmount
+              return (
+                <div key={row.internshipId} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{row.studentName} <span className="text-xs text-muted-foreground font-mono">({row.studentCode})</span></p>
+                    <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position} · {row.monthsPaid}/{row.cap} paid · up to {formatCurrency(row.maxAmount)}/mo</p>
+                  </div>
+                  <Input
+                    type="number" min={0} max={row.maxAmount} step="0.01" className="w-28 h-8"
+                    value={amount}
+                    onChange={e => setRowAmounts(a => ({ ...a, [row.internshipId]: Number(e.target.value) }))}
+                  />
+                  <Input
+                    type="date" className="w-36 h-8"
+                    value={date}
+                    onChange={e => setRowDates(d => ({ ...d, [row.internshipId]: e.target.value }))}
+                  />
+                  <Button size="sm" onClick={() => handleQuickConfirm(row)} disabled={confirmingId === row.internshipId || invalid}>
+                    {confirmingId === row.internshipId ? 'Confirming…' : 'Confirm'}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       <div className="relative w-full sm:max-w-sm">

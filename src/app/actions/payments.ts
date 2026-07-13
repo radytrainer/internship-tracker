@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdminOrEducation } from '@/lib/auth/server'
-import { internshipAllowanceMonthCap, schoolAllowanceShare } from '@/lib/utils'
+import { internshipAllowanceMonthCap, schoolAllowanceShare, formatCurrency } from '@/lib/utils'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -18,11 +18,14 @@ const paymentSchema = z.object({
 
 export type PaymentFormData = z.infer<typeof paymentSchema>
 
-// internship-linked payments always represent the portion paid to the school: allowance minus
-// the student's $110 keep, capped at 4 monthly payments (or fewer if the internship is shorter)
-async function resolveInternshipAllowance(
+// internship-linked payments represent the portion paid to the school: normally allowance minus
+// the student's $110 keep, capped at 4 monthly payments (or fewer if the internship is shorter).
+// The amount is editable (some months the student doesn't get their full allowance), but it can
+// never exceed that standard share, so the student's $110 keep is never eaten into.
+async function validateInternshipAllowance(
   supabase: ReturnType<typeof createAdminClient>,
   internshipId: string,
+  amount: number,
   excludePaymentId?: string
 ) {
   const { data: internship } = await supabase
@@ -44,7 +47,12 @@ async function resolveInternshipAllowance(
     return { error: `This internship has already reached its ${cap}-month allowance payment limit.` }
   }
 
-  return { amount: schoolAllowanceShare(internship.allowance) }
+  const maxAmount = schoolAllowanceShare(internship.allowance)
+  if (amount > maxAmount) {
+    return { error: `Amount can't exceed ${formatCurrency(maxAmount)} — the student always keeps at least $110 of their allowance.` }
+  }
+
+  return { ok: true as const }
 }
 
 export async function createPayment(data: PaymentFormData) {
@@ -54,17 +62,14 @@ export async function createPayment(data: PaymentFormData) {
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
 
   const supabase = createAdminClient()
-  let amount = parsed.data.amount
 
   if (parsed.data.internship_id) {
-    const resolved = await resolveInternshipAllowance(supabase, parsed.data.internship_id)
-    if ('error' in resolved) return { success: false, error: resolved.error }
-    amount = resolved.amount
+    const check = await validateInternshipAllowance(supabase, parsed.data.internship_id, parsed.data.amount)
+    if ('error' in check) return { success: false, error: check.error }
   }
 
   const { error } = await supabase.from('allowance_payments').insert({
     ...parsed.data,
-    amount,
     internship_id: parsed.data.internship_id || null,
     employment_id: parsed.data.employment_id || null,
     payment_time: parsed.data.payment_time || null,
@@ -82,17 +87,14 @@ export async function updatePayment(id: string, data: PaymentFormData) {
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
 
   const supabase = createAdminClient()
-  let amount = parsed.data.amount
 
   if (parsed.data.internship_id) {
-    const resolved = await resolveInternshipAllowance(supabase, parsed.data.internship_id, id)
-    if ('error' in resolved) return { success: false, error: resolved.error }
-    amount = resolved.amount
+    const check = await validateInternshipAllowance(supabase, parsed.data.internship_id, parsed.data.amount, id)
+    if ('error' in check) return { success: false, error: check.error }
   }
 
   const { error } = await supabase.from('allowance_payments').update({
     ...parsed.data,
-    amount,
     internship_id: parsed.data.internship_id || null,
     employment_id: parsed.data.employment_id || null,
     payment_time: parsed.data.payment_time || null,
