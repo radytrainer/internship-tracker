@@ -32,7 +32,7 @@ export default async function InternshipsPage() {
 
   let studentsQuery = admin
     .from('students')
-    .select('id, first_name, last_name, student_code')
+    .select('id, first_name, last_name, student_code, class_id, notes')
     .order('first_name')
 
   if (studentFilter) {
@@ -40,10 +40,11 @@ export default async function InternshipsPage() {
     studentsQuery = studentsQuery.in('id', studentFilter)
   }
 
-  const [{ data: internships }, { data: students }, { data: companies }] = await Promise.all([
+  const [{ data: internships }, { data: students }, { data: companies }, { data: classes }] = await Promise.all([
     internshipsQuery,
     studentsQuery,
-    admin.from('companies').select('id, company_name').order('company_name'),
+    admin.from('companies').select('id, company_name, has_mou').order('company_name'),
+    admin.from('classes').select('id, name').order('name'),
   ])
 
   return (
@@ -51,6 +52,7 @@ export default async function InternshipsPage() {
       internships={internships ?? []}
       students={students ?? []}
       companies={companies ?? []}
+      classes={classes ?? []}
       role={role ?? 'admin'}
     />
   )

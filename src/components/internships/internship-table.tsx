@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Pencil, Trash2, CheckCircle, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, CheckCircle, MoreHorizontal, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,16 +27,18 @@ type AnyRecord = any
 
 interface InternshipTableProps {
   internships: Internship[]
-  students: { id: string; first_name: string; last_name: string; student_code: string }[]
-  companies: { id: string; company_name: string }[]
+  students: { id: string; first_name: string; last_name: string; student_code: string; class_id?: string | null; notes?: string | null }[]
+  companies: { id: string; company_name: string; has_mou?: boolean }[]
+  classes: { id: string; name: string }[]
   role: AppRole
 }
 
-export function InternshipTable({ internships, students, companies, role }: InternshipTableProps) {
+export function InternshipTable({ internships, students, companies, classes, role }: InternshipTableProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCompany, setFilterCompany] = useState('all')
+  const [filterClass, setFilterClass] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
   const [editInternship, setEditInternship] = useState<Internship | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
@@ -48,15 +50,18 @@ export function InternshipTable({ internships, students, companies, role }: Inte
     const q = search.toLowerCase()
     const student = students.find(s => s.id === iv.student_id)
     const company = companies.find(c => c.id === iv.company_id)
+    const studentClass = classes.find(c => c.id === student?.class_id)
     const matchSearch = !q ||
       student?.first_name?.toLowerCase().includes(q) ||
       student?.last_name?.toLowerCase().includes(q) ||
+      studentClass?.name?.toLowerCase().includes(q) ||
       company?.company_name?.toLowerCase().includes(q) ||
       iv.position?.toLowerCase().includes(q)
     const matchStatus = filterStatus === 'all' || iv.internship_status === filterStatus
     const matchCompany = filterCompany === 'all' || iv.company_id === filterCompany
-    return matchSearch && matchStatus && matchCompany
-  }), [internships, students, companies, search, filterStatus, filterCompany])
+    const matchClass = filterClass === 'all' || student?.class_id === filterClass
+    return matchSearch && matchStatus && matchCompany && matchClass
+  }), [internships, students, companies, classes, search, filterStatus, filterCompany, filterClass])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -85,13 +90,20 @@ export function InternshipTable({ internships, students, companies, role }: Inte
       <div className="flex flex-wrap gap-3">
         <div className="relative w-full sm:flex-1 sm:min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by student, company, or position..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Search by student, class, company, or position..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="All Statuses" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             {['Active', 'Completed', 'Terminated'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterClass} onValueChange={setFilterClass}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="All Classes" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Classes</SelectItem>
+            {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterCompany} onValueChange={setFilterCompany}>
@@ -124,17 +136,33 @@ export function InternshipTable({ internships, students, companies, role }: Inte
               filtered.map((iv: AnyRecord) => {
                 const student = students.find(s => s.id === iv.student_id)
                 const company = companies.find(c => c.id === iv.company_id)
+                const studentClass = classes.find(c => c.id === student?.class_id)
+                const hasMOU = company?.has_mou === true
                 return (
-                  <TableRow key={iv.id}>
+                  <TableRow key={iv.id} className={hasMOU ? 'bg-green-50/60 dark:bg-green-950/10' : ''}>
                     <TableCell>
                       <div>
                         <p className="font-medium">{student?.first_name} {student?.last_name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{student?.student_code}</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {student?.student_code}{studentClass ? ` · ${studentClass.name}` : ''}
+                        </p>
+                        {student?.notes && (
+                          <p className="text-xs italic text-amber-600 dark:text-amber-400 mt-0.5 max-w-[200px] truncate" title={student.notes}>
+                            {student.notes}
+                          </p>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium text-sm">{company?.company_name ?? '—'}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium text-sm">{company?.company_name ?? '—'}</p>
+                          {hasMOU && (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 text-[10px] font-semibold px-1.5 py-0.5">
+                              <ShieldCheck className="h-2.5 w-2.5" />MOU
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{iv.position ?? '—'}</p>
                       </div>
                     </TableCell>

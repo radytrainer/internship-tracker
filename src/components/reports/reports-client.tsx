@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Download, Users, Briefcase, TrendingUp, Building } from 'lucide-react'
+import { Download, Users, Briefcase, TrendingUp, Building, ShieldCheck, UserCheck } from 'lucide-react'
 import { exportToExcel, exportToCSV } from '@/lib/export'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
@@ -124,6 +124,22 @@ export function ReportsClient({ generations, students, applications, internships
     ? Math.round((filteredStudents.filter((s: AnyRecord) => s.status === 'Employed').length / filteredStudents.length) * 100)
     : 0
 
+  // Companies with a signed MOU that have actually taken on at least one intern
+  const mouCompanyIds = useMemo(() =>
+    new Set(companies.filter((c: AnyRecord) => c.has_mou).map((c: AnyRecord) => c.id)),
+    [companies]
+  )
+  const mouCompaniesPlaced = useMemo(() =>
+    new Set(internships.filter((i: AnyRecord) => mouCompanyIds.has(i.company_id)).map((i: AnyRecord) => i.company_id)).size,
+    [internships, mouCompanyIds]
+  )
+
+  // Distinct students who have found/secured an internship placement
+  const studentsFoundInternship = useMemo(() =>
+    new Set(internships.map((i: AnyRecord) => i.student_id)).size,
+    [internships]
+  )
+
   const exportReport = (format: 'excel' | 'csv') => {
     const data = students.map((s: AnyRecord) => ({
       'Student Code': s.student_code, 'Name': `${s.first_name} ${s.last_name}`,
@@ -157,12 +173,14 @@ export function ReportsClient({ generations, students, applications, internships
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
           { label: 'Total Students', value: formatNumber(filteredStudents.length), icon: Users, color: 'text-blue-500' },
           { label: 'Employment Rate', value: `${employmentRate}%`, icon: TrendingUp, color: 'text-green-500' },
           { label: 'Avg Salary', value: formatCurrency(salaryStats.avg), icon: Briefcase, color: 'text-purple-500' },
           { label: 'Partner Companies', value: formatNumber(companies.length), icon: Building, color: 'text-orange-500' },
+          { label: 'MOU Companies Placed', value: `${mouCompaniesPlaced} / ${mouCompanyIds.size}`, icon: ShieldCheck, color: 'text-emerald-500' },
+          { label: 'Students Found Internship', value: formatNumber(studentsFoundInternship), icon: UserCheck, color: 'text-teal-500' },
         ].map(kpi => (
           <Card key={kpi.label}>
             <CardContent className="pt-6">
