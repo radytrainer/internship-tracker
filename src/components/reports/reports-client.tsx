@@ -5,8 +5,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Download, Users, Briefcase, TrendingUp, Building, ShieldCheck, UserCheck } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { Download, Users, Briefcase, TrendingUp, Building, Building2, ShieldCheck, UserCheck } from 'lucide-react'
 import { exportToExcel, exportToCSV } from '@/lib/export'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
@@ -26,6 +28,7 @@ const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'
 
 export function ReportsClient({ generations, students, applications, internships, employment, companies }: ReportsClientProps) {
   const [filterGen, setFilterGen] = useState('all')
+  const [companySheet, setCompanySheet] = useState<'mou' | 'non-mou' | null>(null)
 
   const filteredStudents = useMemo(() =>
     filterGen === 'all' ? students : students.filter((s: AnyRecord) => s.generation_id === filterGen),
@@ -129,10 +132,41 @@ export function ReportsClient({ generations, students, applications, internships
     new Set(companies.filter((c: AnyRecord) => c.has_mou).map((c: AnyRecord) => c.id)),
     [companies]
   )
-  const mouCompaniesPlaced = useMemo(() =>
-    new Set(internships.filter((i: AnyRecord) => mouCompanyIds.has(i.company_id)).map((i: AnyRecord) => i.company_id)).size,
-    [internships, mouCompanyIds]
+
+  // Number of distinct students placed at each company
+  const studentCountByCompany = useMemo(() => {
+    const map: Record<string, Set<string>> = {}
+    internships.forEach((i: AnyRecord) => {
+      if (!map[i.company_id]) map[i.company_id] = new Set()
+      map[i.company_id].add(i.student_id)
+    })
+    return map
+  }, [internships])
+
+  const mouCompanyList = useMemo(() =>
+    companies
+      .filter((c: AnyRecord) => c.has_mou && (studentCountByCompany[c.id]?.size ?? 0) > 0)
+      .map((c: AnyRecord) => ({ id: c.id, name: c.company_name, studentCount: studentCountByCompany[c.id].size }))
+      .sort((a, b) => b.studentCount - a.studentCount),
+    [companies, studentCountByCompany]
   )
+  const nonMouCompanyList = useMemo(() =>
+    companies
+      .filter((c: AnyRecord) => !c.has_mou && (studentCountByCompany[c.id]?.size ?? 0) > 0)
+      .map((c: AnyRecord) => ({ id: c.id, name: c.company_name, studentCount: studentCountByCompany[c.id].size }))
+      .sort((a, b) => b.studentCount - a.studentCount),
+    [companies, studentCountByCompany]
+  )
+
+  const mouCompaniesPlaced = mouCompanyList.length
+  const nonMouCompaniesPlaced = nonMouCompanyList.length
+  const nonMouCompanyCount = companies.length - mouCompanyIds.size
+
+  const activeCompanySheet = companySheet === 'mou'
+    ? { title: 'MOU Companies with Interns', description: 'Companies with a signed MOU that have taken on interns.', list: mouCompanyList }
+    : companySheet === 'non-mou'
+    ? { title: 'Non-MOU Companies with Interns', description: 'Companies without an MOU that have still taken on interns.', list: nonMouCompanyList }
+    : null
 
   // Distinct students who have found/secured an internship placement
   const studentsFoundInternship = useMemo(() =>
@@ -180,28 +214,57 @@ export function ReportsClient({ generations, students, applications, internships
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
         {[
           { label: 'Total Students', value: formatNumber(filteredStudents.length), icon: Users, color: 'text-blue-500' },
           { label: 'Employment Rate', value: `${employmentRate}%`, icon: TrendingUp, color: 'text-green-500' },
           { label: 'Avg Salary', value: formatCurrency(salaryStats.avg), icon: Briefcase, color: 'text-purple-500' },
           { label: 'Partner Companies', value: formatNumber(companies.length), icon: Building, color: 'text-orange-500' },
-          { label: 'MOU Companies Placed', value: `${mouCompaniesPlaced} / ${mouCompanyIds.size}`, icon: ShieldCheck, color: 'text-emerald-500' },
+          { label: 'MOU Companies Placed', value: `${mouCompaniesPlaced} / ${mouCompanyIds.size}`, icon: ShieldCheck, color: 'text-emerald-500', onClick: () => setCompanySheet('mou') },
+          { label: 'Non-MOU Companies Placed', value: `${nonMouCompaniesPlaced} / ${nonMouCompanyCount}`, icon: Building2, color: 'text-slate-500', onClick: () => setCompanySheet('non-mou') },
           { label: 'Students Found Internship', value: formatNumber(studentsFoundInternship), icon: UserCheck, color: 'text-teal-500' },
-        ].map(kpi => (
-          <Card key={kpi.label}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{kpi.label}</p>
-                  <p className="text-2xl font-bold mt-1">{kpi.value}</p>
+        ].map(kpi => {
+          const card = (
+            <Card className={kpi.onClick ? 'transition-transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer' : undefined}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{kpi.label}</p>
+                    <p className="text-2xl font-bold mt-1">{kpi.value}</p>
+                  </div>
+                  <kpi.icon className={`h-8 w-8 ${kpi.color}`} />
                 </div>
-                <kpi.icon className={`h-8 w-8 ${kpi.color}`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          )
+          return kpi.onClick ? (
+            <button key={kpi.label} type="button" onClick={kpi.onClick} className="text-left">{card}</button>
+          ) : (
+            <div key={kpi.label}>{card}</div>
+          )
+        })}
       </div>
+
+      <Sheet open={companySheet !== null} onOpenChange={open => { if (!open) setCompanySheet(null) }}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col overflow-hidden">
+          <SheetHeader className="p-6 pb-4 border-b shrink-0">
+            <SheetTitle>{activeCompanySheet?.title} ({activeCompanySheet?.list.length ?? 0})</SheetTitle>
+            <SheetDescription>{activeCompanySheet?.description}</SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {!activeCompanySheet || activeCompanySheet.list.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-10">No companies found.</p>
+            ) : (
+              activeCompanySheet.list.map(c => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <p className="font-medium truncate">{c.name}</p>
+                  <Badge variant="secondary">{c.studentCount} student{c.studentCount === 1 ? '' : 's'}</Badge>
+                </div>
+              ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Tabs defaultValue="generation">
         <TabsList>
