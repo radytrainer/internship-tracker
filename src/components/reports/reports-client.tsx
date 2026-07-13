@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Download, Users, Briefcase, TrendingUp, Building, Building2, ShieldCheck, UserCheck } from 'lucide-react'
+import { Download, Users, Briefcase, TrendingUp, Building, Building2, ShieldCheck, UserCheck, ChevronRight } from 'lucide-react'
 import { exportToExcel, exportToCSV } from '@/lib/export'
-import { formatCurrency, formatNumber } from '@/lib/utils'
+import { cn, formatCurrency, formatNumber } from '@/lib/utils'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRecord = any
@@ -161,6 +161,8 @@ export function ReportsClient({ generations, students, applications, internships
   const mouCompaniesPlaced = mouCompanyList.length
   const nonMouCompaniesPlaced = nonMouCompanyList.length
   const nonMouCompanyCount = companies.length - mouCompanyIds.size
+  const mouPlacedPct = mouCompanyIds.size > 0 ? Math.round((mouCompaniesPlaced / mouCompanyIds.size) * 100) : 0
+  const nonMouPlacedPct = nonMouCompanyCount > 0 ? Math.round((nonMouCompaniesPlaced / nonMouCompanyCount) * 100) : 0
 
   const activeCompanySheet = companySheet === 'mou'
     ? { title: 'MOU Companies with Interns', description: 'Companies with a signed MOU that have taken on interns.', list: mouCompanyList }
@@ -214,28 +216,38 @@ export function ReportsClient({ generations, students, applications, internships
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {[
-          { label: 'Total Students', value: formatNumber(filteredStudents.length), icon: Users, color: 'text-blue-500' },
-          { label: 'Employment Rate', value: `${employmentRate}%`, icon: TrendingUp, color: 'text-green-500' },
-          { label: 'Avg Salary', value: formatCurrency(salaryStats.avg), icon: Briefcase, color: 'text-purple-500' },
-          { label: 'Partner Companies', value: formatNumber(companies.length), icon: Building, color: 'text-orange-500' },
-          { label: 'MOU Companies Placed', value: `${mouCompaniesPlaced} / ${mouCompanyIds.size}`, icon: ShieldCheck, color: 'text-emerald-500', onClick: () => setCompanySheet('mou') },
-          { label: 'Non-MOU Companies Placed', value: `${nonMouCompaniesPlaced} / ${nonMouCompanyCount}`, icon: Building2, color: 'text-slate-500', onClick: () => setCompanySheet('non-mou') },
-          { label: 'Students Found Internship', value: formatNumber(studentsFoundInternship), icon: UserCheck, color: 'text-teal-500' },
+          { label: 'Total Students', value: formatNumber(filteredStudents.length), icon: Users, gradient: 'from-blue-500 to-blue-700', shadow: 'shadow-blue-200 dark:shadow-blue-900' },
+          { label: 'Employment Rate', value: `${employmentRate}%`, icon: TrendingUp, gradient: 'from-green-500 to-green-700', shadow: 'shadow-green-200 dark:shadow-green-900' },
+          { label: 'Avg Salary', value: formatCurrency(salaryStats.avg), icon: Briefcase, gradient: 'from-purple-500 to-purple-700', shadow: 'shadow-purple-200 dark:shadow-purple-900' },
+          { label: 'Partner Companies', value: formatNumber(companies.length), icon: Building, gradient: 'from-orange-400 to-orange-600', shadow: 'shadow-orange-200 dark:shadow-orange-900' },
+          { label: 'MOU Companies Placed', value: `${mouCompaniesPlaced} / ${mouCompanyIds.size}`, sub: `${mouPlacedPct}% placed`, icon: ShieldCheck, gradient: 'from-emerald-500 to-emerald-700', shadow: 'shadow-emerald-200 dark:shadow-emerald-900', onClick: () => setCompanySheet('mou') },
+          { label: 'Non-MOU Companies Placed', value: `${nonMouCompaniesPlaced} / ${nonMouCompanyCount}`, sub: `${nonMouPlacedPct}% placed`, icon: Building2, gradient: 'from-slate-500 to-slate-700', shadow: 'shadow-slate-200 dark:shadow-slate-900', onClick: () => setCompanySheet('non-mou') },
+          { label: 'Students Found Internship', value: formatNumber(studentsFoundInternship), icon: UserCheck, gradient: 'from-teal-500 to-teal-700', shadow: 'shadow-teal-200 dark:shadow-teal-900' },
         ].map(kpi => {
           const card = (
-            <Card className={kpi.onClick ? 'transition-transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer' : undefined}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{kpi.label}</p>
-                    <p className="text-2xl font-bold mt-1">{kpi.value}</p>
-                  </div>
-                  <kpi.icon className={`h-8 w-8 ${kpi.color}`} />
+            <div className={cn(
+              'relative overflow-hidden rounded-2xl bg-gradient-to-br p-5 shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl h-full',
+              kpi.gradient, kpi.shadow
+            )}>
+              <div className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-white/10" />
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-white/80 truncate">{kpi.label}</p>
+                  <p className="mt-1.5 text-2xl font-bold text-white leading-none">{kpi.value}</p>
+                  {kpi.sub && <p className="mt-1.5 text-xs text-white/70">{kpi.sub}</p>}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="shrink-0 rounded-xl bg-white/20 p-2.5">
+                  <kpi.icon className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              {kpi.onClick && (
+                <div className="mt-3 flex items-center gap-0.5 text-xs font-medium text-white/70">
+                  View companies<ChevronRight className="h-3 w-3" />
+                </div>
+              )}
+            </div>
           )
           return kpi.onClick ? (
             <button key={kpi.label} type="button" onClick={kpi.onClick} className="text-left">{card}</button>
