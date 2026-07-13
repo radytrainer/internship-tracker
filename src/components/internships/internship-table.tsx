@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Pencil, Trash2, CheckCircle, MoreHorizontal, ShieldCheck } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, CheckCircle, MoreHorizontal, ShieldCheck, UserCheck, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,8 +13,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { InternshipForm } from './internship-form'
 import { deleteInternship } from '@/app/actions/internships'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { INTERNSHIP_SOURCE_OPTIONS, INTERNSHIP_SOURCE_STYLES } from '@/lib/internship-source'
 import type { AppRole } from '@/lib/roles'
-import type { Internship } from '@/types/database.types'
+import type { Internship, InternshipSource } from '@/types/database.types'
 
 const STATUS_COLORS: Record<string, string> = {
   Active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -39,6 +40,7 @@ export function InternshipTable({ internships, students, companies, classes, rol
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterCompany, setFilterCompany] = useState('all')
   const [filterClass, setFilterClass] = useState('all')
+  const [filterSource, setFilterSource] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
   const [editInternship, setEditInternship] = useState<Internship | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
@@ -60,8 +62,9 @@ export function InternshipTable({ internships, students, companies, classes, rol
     const matchStatus = filterStatus === 'all' || iv.internship_status === filterStatus
     const matchCompany = filterCompany === 'all' || iv.company_id === filterCompany
     const matchClass = filterClass === 'all' || student?.class_id === filterClass
-    return matchSearch && matchStatus && matchCompany && matchClass
-  }), [internships, students, companies, classes, search, filterStatus, filterCompany, filterClass])
+    const matchSource = filterSource === 'all' || (filterSource === 'unset' ? !iv.source : iv.source === filterSource)
+    return matchSearch && matchStatus && matchCompany && matchClass && matchSource
+  }), [internships, students, companies, classes, search, filterStatus, filterCompany, filterClass, filterSource])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -113,6 +116,14 @@ export function InternshipTable({ internships, students, companies, classes, rol
             {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.company_name}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterSource} onValueChange={setFilterSource}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="All Sources" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sources</SelectItem>
+            {INTERNSHIP_SOURCE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+            <SelectItem value="unset">Not Set</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
@@ -142,7 +153,15 @@ export function InternshipTable({ internships, students, companies, classes, rol
                   <TableRow key={iv.id} className={hasMOU ? 'bg-green-50/60 dark:bg-green-950/10' : ''}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{student?.first_name} {student?.last_name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-medium">{student?.first_name} {student?.last_name}</p>
+                          {iv.source && (
+                            <span className={cn('inline-flex items-center gap-0.5 rounded-full text-[10px] font-semibold px-1.5 py-0.5', INTERNSHIP_SOURCE_STYLES[iv.source as InternshipSource])}>
+                              {iv.source === 'Student Found' ? <UserCheck className="h-2.5 w-2.5" /> : <Users className="h-2.5 w-2.5" />}
+                              {iv.source}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground font-mono">
                           {student?.student_code}{studentClass ? ` · ${studentClass.name}` : ''}
                         </p>

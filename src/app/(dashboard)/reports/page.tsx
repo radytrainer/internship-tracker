@@ -17,7 +17,7 @@ export default async function ReportsPage() {
     supabase.from('generations').select('id, name, year').order('year'),
     supabase.from('students').select('id, student_code, first_name, last_name, gender, status, class_id, generation_id').order('first_name'),
     supabase.from('internship_applications').select('id, student_id, company_id, application_status, application_date').order('application_date'),
-    supabase.from('internships').select('id, student_id, company_id, internship_status, allowance, start_date, end_date').order('start_date'),
+    supabase.from('internships').select('id, student_id, company_id, internship_status, source, allowance, start_date, end_date').order('start_date'),
     supabase.from('employment_records').select('id, student_id, company_name, position, employment_type, employment_status, salary, start_date').order('start_date'),
     supabase.from('companies').select('id, company_name, industry, has_mou').order('company_name'),
   ])

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
 import { createInternship, updateInternship } from '@/app/actions/internships'
+import { INTERNSHIP_SOURCE_OPTIONS } from '@/lib/internship-source'
 import { toast } from 'sonner'
 import type { Internship } from '@/types/database.types'
 
@@ -28,6 +29,7 @@ const schema = z.object({
   supervisor_email: z.string().email().optional().nullable().or(z.literal('')),
   tutor: z.string().optional().nullable(),
   internship_status: z.enum(['Active', 'Completed', 'Terminated']).default('Active'),
+  source: z.enum(['Student Found', 'Staff Outreach']).optional().nullable(),
   notes: z.string().optional().nullable(),
 })
 
@@ -48,7 +50,7 @@ export function InternshipForm({ open, onClose, internship, students, companies 
       student_id: '', company_id: '', position: '',
       allowance: undefined, start_date: '', end_date: '',
       agreement_signed: false, supervisor: '', supervisor_phone: '',
-      supervisor_email: '', tutor: '', internship_status: 'Active', notes: '',
+      supervisor_email: '', tutor: '', internship_status: 'Active', source: null, notes: '',
     },
   })
 
@@ -67,6 +69,7 @@ export function InternshipForm({ open, onClose, internship, students, companies 
         supervisor_email: internship.supervisor_email ?? '',
         tutor: internship.tutor ?? '',
         internship_status: internship.internship_status,
+        source: internship.source ?? null,
         notes: internship.notes ?? '',
       })
     } else {
@@ -74,7 +77,7 @@ export function InternshipForm({ open, onClose, internship, students, companies 
         student_id: '', company_id: '', position: '',
         allowance: undefined, start_date: '', end_date: '',
         agreement_signed: false, supervisor: '', supervisor_phone: '',
-        supervisor_email: '', tutor: '', internship_status: 'Active', notes: '',
+        supervisor_email: '', tutor: '', internship_status: 'Active', source: null, notes: '',
       })
     }
   }, [internship, open, form])
@@ -194,6 +197,19 @@ export function InternshipForm({ open, onClose, internship, students, companies 
               <FormItem>
                 <FormLabel>Tutor</FormLabel>
                 <FormControl><Input placeholder="Tutor name..." {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="source" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Found By</FormLabel>
+                <Select onValueChange={v => field.onChange(v === 'none' ? null : v)} value={field.value ?? 'none'}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Not set" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    {INTERNSHIP_SOURCE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )} />

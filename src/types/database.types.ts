@@ -25,6 +25,7 @@ export type ApplicationStatus =
 export type InterviewType = 'Online' | 'On Site'
 export type InterviewResult = 'Pending' | 'Passed' | 'Failed'
 export type InternshipStatus = 'Active' | 'Completed' | 'Terminated'
+export type InternshipSource = 'Student Found' | 'Staff Outreach'
 export type EmploymentType = 'Full-Time' | 'Part-Time' | 'Contract'
 export type EmploymentStatus = 'Active' | 'Resigned' | 'Terminated'
 
@@ -172,6 +173,7 @@ export interface Internship {
   supervisor_email: string | null
   tutor: string | null
   internship_status: InternshipStatus
+  source: InternshipSource | null
   notes: string | null
   created_at: string
   updated_at: string

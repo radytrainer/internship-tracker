@@ -19,6 +19,7 @@ const internshipSchema = z.object({
   supervisor_email: z.string().email().optional().nullable().or(z.literal('')),
   tutor: z.string().optional().nullable(),
   internship_status: z.enum(['Active', 'Completed', 'Terminated']).default('Active'),
+  source: z.enum(['Student Found', 'Staff Outreach']).optional().nullable(),
   notes: z.string().optional().nullable(),
 })
 

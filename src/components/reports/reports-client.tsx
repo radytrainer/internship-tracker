@@ -140,6 +140,13 @@ export function ReportsClient({ generations, students, applications, internships
     [internships]
   )
 
+  // Breakdown of internships the student sourced themselves vs. staff arranged via outreach
+  const internshipSourceStats = useMemo(() => {
+    const studentFound = internships.filter((i: AnyRecord) => i.source === 'Student Found').length
+    const staffOutreach = internships.filter((i: AnyRecord) => i.source === 'Staff Outreach').length
+    return { studentFound, staffOutreach, notSet: internships.length - studentFound - staffOutreach }
+  }, [internships])
+
   const exportReport = (format: 'excel' | 'csv') => {
     const data = students.map((s: AnyRecord) => ({
       'Student Code': s.student_code, 'Name': `${s.first_name} ${s.last_name}`,
@@ -297,23 +304,40 @@ export function ReportsClient({ generations, students, applications, internships
         </TabsContent>
 
         <TabsContent value="companies">
-          <Card>
-            <CardHeader><CardTitle>Top 10 Companies by Applications</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={companyStats} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={95} />
-                  <Tooltip contentStyle={{ borderRadius: '8px' }} />
-                  <Legend />
-                  <Bar dataKey="applications" fill="#6366f1" radius={[0, 4, 4, 0]} name="Applications" />
-                  <Bar dataKey="accepted" fill="#22c55e" radius={[0, 4, 4, 0]} name="Accepted" />
-                  <Bar dataKey="internships" fill="#f59e0b" radius={[0, 4, 4, 0]} name="Internships" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardHeader><CardTitle>Top 10 Companies by Applications</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={companyStats} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={95} />
+                    <Tooltip contentStyle={{ borderRadius: '8px' }} />
+                    <Legend />
+                    <Bar dataKey="applications" fill="#6366f1" radius={[0, 4, 4, 0]} name="Applications" />
+                    <Bar dataKey="accepted" fill="#22c55e" radius={[0, 4, 4, 0]} name="Accepted" />
+                    <Bar dataKey="internships" fill="#f59e0b" radius={[0, 4, 4, 0]} name="Internships" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle>Internship Source</CardTitle></CardHeader>
+              <CardContent className="space-y-4 pt-2">
+                {[
+                  { label: 'Student Found', value: formatNumber(internshipSourceStats.studentFound) },
+                  { label: 'Staff Outreach', value: formatNumber(internshipSourceStats.staffOutreach) },
+                  { label: 'Not Set', value: formatNumber(internshipSourceStats.notSet) },
+                ].map(row => (
+                  <div key={row.label} className="flex justify-between items-center py-2 border-b last:border-0">
+                    <span className="text-muted-foreground">{row.label}</span>
+                    <span className="font-semibold">{row.value}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="financials">
