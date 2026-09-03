@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2 } from 'lucide-react'
 import { createInterview, updateInterview } from '@/app/actions/interviews'
+import { ALREADY_PLACED_STATUSES } from '@/lib/utils'
 import { toast } from 'sonner'
 import type { Interview } from '@/types/database.types'
 import type { AppRole } from '@/lib/roles'
@@ -79,10 +80,12 @@ export function InterviewForm({ open, onClose, interview, applications, intervie
     `${a.student?.first_name ?? ''} ${a.student?.last_name ?? ''} — ${a.company?.company_name ?? ''} / ${a.position?.position_name ?? ''}`
 
   // hide applications whose student already has an interview (any result) with
-  // the same company — a different company for the same student is still fine
+  // the same company — a different company for the same student is still fine —
+  // and hide students who already passed an interview and hold an internship/job
   const applicationOptions = applications.filter((a: ApplicationOption) => {
     if (a.id === interview?.application_id) return true
     if (a.application_status === 'Accepted') return false
+    if (ALREADY_PLACED_STATUSES.has(a.student?.status ?? '')) return false
     const alreadyInterviewedForCompany = interviews.some((iv: ApplicationOption) =>
       iv.id !== interview?.id &&
       iv.application?.student_id === a.student_id &&

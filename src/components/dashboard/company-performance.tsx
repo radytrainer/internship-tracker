@@ -40,11 +40,7 @@ export function CompanyPerformance({ data }: CompanyPerformanceProps) {
                   <p className="text-sm font-medium truncate">{c.company_name}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className="text-xs px-1.5 py-0">{c.application_count} apps</Badge>
                   <Badge variant="secondary" className="text-xs px-1.5 py-0">{c.internship_count} interns</Badge>
-                  {c.employed_count > 0 && (
-                    <Badge className="text-xs px-1.5 py-0 bg-emerald-500">{c.employed_count} hired</Badge>
-                  )}
                 </div>
               </div>
             ))}

@@ -32,7 +32,7 @@ export default async function InterviewsPage() {
 
   let appsQuery = admin
     .from('internship_applications')
-    .select('id, student_id, company_id, application_status, student:students(first_name, last_name, student_code), company:companies(company_name), position:company_positions(position_name)')
+    .select('id, student_id, company_id, application_status, student:students(first_name, last_name, student_code, status), company:companies(company_name), position:company_positions(position_name)')
     .order('created_at', { ascending: false })
 
   if (studentFilter) {

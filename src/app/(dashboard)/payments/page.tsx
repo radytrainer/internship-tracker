@@ -1,8 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentProfile } from '@/lib/auth/server'
+import { getCurrentProfile, getEducationStaffClassIds } from '@/lib/auth/server'
 import { redirect } from 'next/navigation'
-import { PaymentTable } from '@/components/payments/payment-table'
-import { PassedInterviewCard } from '@/components/payments/passed-interview-card'
+import { PaymentsClient } from '@/components/payments/payments-client'
 import { internshipAllowanceMonthCap, schoolAllowanceShare } from '@/lib/utils'
 
 export const revalidate = 0
@@ -13,10 +12,12 @@ function one<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export default async function PaymentsPage() {
-  const { role } = await getCurrentProfile()
+  const { role, profile } = await getCurrentProfile()
   if (role !== 'admin' && role !== 'education_team') redirect('/dashboard')
 
   const admin = createAdminClient()
+
+  const educatorClassIds = role === 'education_team' && profile ? await getEducationStaffClassIds(profile.id) : null
 
   const [{ data: payments }, { data: students }, { data: internships }, { data: employmentRecords }, { data: passedInterviews }] = await Promise.all([
     admin
@@ -25,7 +26,7 @@ export default async function PaymentsPage() {
       .order('payment_date', { ascending: false }),
     admin
       .from('students')
-      .select('id, first_name, last_name, student_code')
+      .select('id, first_name, last_name, student_code, class_id')
       .order('first_name'),
     admin
       .from('internships')
@@ -33,7 +34,7 @@ export default async function PaymentsPage() {
       .order('created_at', { ascending: false }),
     admin
       .from('employment_records')
-      .select('id, student_id, position, company_name, salary')
+      .select('id, student_id, position, company_name, salary, start_date, end_date')
       .order('created_at', { ascending: false }),
     admin
       .from('interviews')
@@ -79,15 +80,19 @@ export default async function PaymentsPage() {
       return rank(a) - rank(b)
     })
 
+  const restrictedStudentIds = educatorClassIds
+    ? (students ?? []).filter(s => educatorClassIds.includes(s.class_id)).map(s => s.id)
+    : null
+
   return (
-    <div className="space-y-6">
-      <PassedInterviewCard students={passedInterviewStudents} />
-      <PaymentTable
-        payments={payments ?? []}
-        students={students ?? []}
-        internships={internships ?? []}
-        employmentRecords={employmentRecords ?? []}
-      />
-    </div>
+    <PaymentsClient
+      payments={payments ?? []}
+      students={students ?? []}
+      internships={internships ?? []}
+      employmentRecords={employmentRecords ?? []}
+      passedInterviewStudents={passedInterviewStudents}
+      showScopeToggle={role === 'education_team'}
+      restrictedStudentIds={restrictedStudentIds}
+    />
   )
 }

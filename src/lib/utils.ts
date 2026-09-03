@@ -15,7 +15,7 @@ export function formatDate(date: string | null | undefined, fmt = 'MMM d, yyyy')
 
 export function formatCurrency(amount: number | null | undefined, currency = 'USD') {
   if (amount == null) return '—'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)
 }
 
 export function formatNumber(n: number | null | undefined) {
@@ -76,6 +76,10 @@ export const LEAVE_STATUS_COLORS: Record<string, string> = {
   'Rejected': 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
 }
 
+// students in these statuses already passed an interview and hold an internship/job — hide them
+// from "new application" / "schedule interview" pickers so staff don't double-book them
+export const ALREADY_PLACED_STATUSES = new Set(['Internship Accepted', 'Internship Active', 'Employed'])
+
 // students keep this much of their monthly internship allowance; the rest goes to the school
 export const STUDENT_ALLOWANCE_KEEP = 110
 // students pay the school for at most this many months, even on a longer internship
@@ -93,4 +97,28 @@ export function internshipAllowanceMonthCap(start: string | null | undefined, en
 
 export function schoolAllowanceShare(monthlyAllowance: number | null | undefined) {
   return Math.max(0, (monthlyAllowance ?? 0) - STUDENT_ALLOWANCE_KEEP)
+}
+
+// full-time employment must contribute back to the school on a sliding scale based on gross salary
+export function employmentPncPercent(grossMonthlySalary: number | null | undefined) {
+  const salary = grossMonthlySalary ?? 0
+  if (salary <= 209) return 0.20
+  if (salary <= 400) return 0.30
+  if (salary <= 500) return 0.35
+  if (salary <= 700) return 0.40
+  return 0.50
+}
+
+export function employmentPncContribution(grossMonthlySalary: number | null | undefined) {
+  return Math.round((grossMonthlySalary ?? 0) * employmentPncPercent(grossMonthlySalary) * 100) / 100
+}
+
+export function durationInMonths(start: string | null | undefined, end: string | null | undefined) {
+  if (!start || !end) return null
+  const s = parseISO(start)
+  const e = parseISO(end)
+  if (!isValid(s) || !isValid(e) || e <= s) return null
+  let months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth())
+  if (e.getDate() > s.getDate()) months += 1
+  return Math.max(1, months)
 }

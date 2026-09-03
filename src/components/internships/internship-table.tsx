@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Search, Pencil, Trash2, CheckCircle, MoreHorizontal, ShieldCheck, UserCheck, Users } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, CheckCircle, MoreHorizontal, ShieldCheck, UserCheck, Users, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { InternshipForm } from './internship-form'
 import { deleteInternship } from '@/app/actions/internships'
-import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { cn, durationInMonths, formatCurrency, formatDate } from '@/lib/utils'
 import { INTERNSHIP_SOURCE_OPTIONS, INTERNSHIP_SOURCE_STYLES } from '@/lib/internship-source'
 import type { AppRole } from '@/lib/roles'
 import type { Internship, InternshipSource } from '@/types/database.types'
@@ -189,6 +189,14 @@ export function InternshipTable({ internships, students, companies, classes, rol
                       <div className="text-sm">
                         <p>{iv.start_date ? formatDate(iv.start_date) : '—'}</p>
                         {iv.end_date && <p className="text-muted-foreground">→ {formatDate(iv.end_date)}</p>}
+                        {(() => {
+                          const months = durationInMonths(iv.start_date, iv.end_date)
+                          return months != null ? (
+                            <span className="mt-1 inline-flex items-center gap-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 text-[10px] font-semibold px-1.5 py-0.5">
+                              <Clock className="h-2.5 w-2.5" />{months} {months === 1 ? 'mo' : 'mos'}
+                            </span>
+                          ) : null
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">

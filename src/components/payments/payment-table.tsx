@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet, CheckCircle2 } from 'lucide-react'
 import { createPayment, updatePayment, deletePayment, type PaymentFormData } from '@/app/actions/payments'
-import { formatDate, formatCurrency, internshipAllowanceMonthCap, schoolAllowanceShare, STUDENT_ALLOWANCE_KEEP } from '@/lib/utils'
+import { formatDate, formatCurrency, internshipAllowanceMonthCap, schoolAllowanceShare, STUDENT_ALLOWANCE_KEEP, employmentPncPercent, employmentPncContribution } from '@/lib/utils'
 import { toast } from 'sonner'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,6 +64,12 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
     ? payments.filter(p => p.internship_id === selectedInternship.id && p.id !== payment?.id).length
     : 0
   const capReached = allowanceCap != null && monthsUsed >= allowanceCap
+
+  const selectedEmployment = employmentRecords.find(e => e.id === form.employment_id) ?? null
+  const employmentPercent = selectedEmployment ? employmentPncPercent(selectedEmployment.salary) : null
+  const employmentAmount = selectedEmployment ? employmentPncContribution(selectedEmployment.salary) : null
+
+  const maxAmount = selectedInternship ? schoolAmount : selectedEmployment ? employmentAmount : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -133,7 +139,16 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
             <label className="text-sm font-medium">Full-Time Job (optional)</label>
             <Select
               value={form.employment_id ?? 'none'}
-              onValueChange={v => setForm(f => ({ ...f, employment_id: v === 'none' ? null : v, internship_id: v === 'none' ? f.internship_id : null }))}
+              onValueChange={v => {
+                const employmentId = v === 'none' ? null : v
+                const emp = employmentId ? employmentRecords.find(e => e.id === employmentId) ?? null : null
+                setForm(f => ({
+                  ...f,
+                  employment_id: employmentId,
+                  internship_id: employmentId ? null : f.internship_id,
+                  amount: emp ? employmentPncContribution(emp.salary) : f.amount,
+                }))
+              }}
               disabled={!form.student_id || studentEmploymentRecords.length === 0}
             >
               <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
@@ -146,13 +161,18 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
                 ))}
               </SelectContent>
             </Select>
+            {selectedEmployment && (
+              <p className="text-xs text-muted-foreground">
+                Full-time employment contributes {Math.round((employmentPercent ?? 0) * 100)}% of {formatCurrency(selectedEmployment.salary)}/mo gross salary — up to {formatCurrency(employmentAmount)}/mo to PNC.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Amount (USD) *</label>
               <Input
-                type="number" min={0} max={selectedInternship ? schoolAmount ?? undefined : undefined} step="0.01" value={form.amount}
+                type="number" min={0} max={maxAmount ?? undefined} step="0.01" value={form.amount}
                 onChange={e => setForm(f => ({ ...f, amount: Number(e.target.value) }))}
                 required
               />
@@ -175,7 +195,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={saving || !form.student_id || form.amount <= 0 || (selectedInternship ? form.amount > (schoolAmount ?? 0) : false) || capReached}>
+            <Button type="submit" disabled={saving || !form.student_id || form.amount <= 0 || (maxAmount != null && form.amount > maxAmount) || capReached}>
               {saving ? 'Saving…' : payment ? 'Save Changes' : 'Confirm Payment'}
             </Button>
           </DialogFooter>
@@ -212,8 +232,10 @@ export function PaymentTable({ payments, students, internships, employmentRecord
   const dueMonth = selectedMonth === 'all' ? format(new Date(), 'yyyy-MM') : selectedMonth
 
   const dueList = useMemo(() => {
-    return internships
-      .filter(i => i.allowance != null)
+    const today = format(new Date(), 'yyyy-MM-dd')
+
+    const internshipRows = internships
+      .filter(i => i.allowance != null && (!i.start_date || i.start_date <= today))
       .map(i => {
         const cap = internshipAllowanceMonthCap(i.start_date, i.end_date)
         const internshipPayments = payments.filter(p => p.internship_id === i.id)
@@ -222,30 +244,63 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         const student = students.find(s => s.id === i.student_id)
         if (!student) return null
         return {
+          key: `internship-${i.id}`,
+          type: 'internship' as const,
           internshipId: i.id as string,
+          employmentId: null as string | null,
           studentId: i.student_id as string,
           studentName: `${student.first_name} ${student.last_name}`,
           studentCode: student.student_code as string,
           companyName: i.company?.company_name ?? 'Unknown company',
           position: i.position as string,
+          startDate: i.start_date as string | null,
+          endDate: i.end_date as string | null,
           maxAmount: schoolAllowanceShare(i.allowance),
           monthsPaid: internshipPayments.length,
-          cap,
+          cap: cap as number | null,
         }
       })
       .filter((row): row is NonNullable<typeof row> => row !== null)
-  }, [internships, payments, students, dueMonth])
+
+    const employmentRows = employmentRecords
+      .filter(e => e.salary != null && (!e.start_date || e.start_date <= today) && (!e.end_date || e.end_date >= today))
+      .map(e => {
+        const employmentPayments = payments.filter(p => p.employment_id === e.id)
+        if (employmentPayments.some(p => monthKey(p.payment_date) === dueMonth)) return null
+        const student = students.find(s => s.id === e.student_id)
+        if (!student) return null
+        return {
+          key: `employment-${e.id}`,
+          type: 'employment' as const,
+          internshipId: null as string | null,
+          employmentId: e.id as string,
+          studentId: e.student_id as string,
+          studentName: `${student.first_name} ${student.last_name}`,
+          studentCode: student.student_code as string,
+          companyName: e.company_name ?? 'Unknown company',
+          position: e.position as string,
+          startDate: e.start_date as string | null,
+          endDate: e.end_date as string | null,
+          maxAmount: employmentPncContribution(e.salary),
+          monthsPaid: employmentPayments.length,
+          cap: null as number | null,
+        }
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+
+    return [...internshipRows, ...employmentRows]
+  }, [internships, employmentRecords, payments, students, dueMonth])
 
   const handleQuickConfirm = async (row: (typeof dueList)[number]) => {
-    const amount = rowAmounts[row.internshipId] ?? row.maxAmount
+    const amount = rowAmounts[row.key] ?? row.maxAmount
     if (amount <= 0 || amount > row.maxAmount) return
-    setConfirmingId(row.internshipId)
+    setConfirmingId(row.key)
     const result = await createPayment({
       student_id: row.studentId,
       internship_id: row.internshipId,
-      employment_id: null,
+      employment_id: row.employmentId,
       amount,
-      payment_date: rowDates[row.internshipId] ?? format(new Date(), 'yyyy-MM-dd'),
+      payment_date: rowDates[row.key] ?? format(new Date(), 'yyyy-MM-dd'),
       payment_time: '',
       notes: '',
     })
@@ -253,8 +308,8 @@ export function PaymentTable({ payments, students, internships, employmentRecord
     if (result.error) toast.error(result.error)
     else {
       toast.success(`Payment confirmed for ${row.studentName}`)
-      setRowAmounts(a => { const next = { ...a }; delete next[row.internshipId]; return next })
-      setRowDates(d => { const next = { ...d }; delete next[row.internshipId]; return next })
+      setRowAmounts(a => { const next = { ...a }; delete next[row.key]; return next })
+      setRowDates(d => { const next = { ...d }; delete next[row.key]; return next })
       router.refresh()
     }
   }
@@ -323,7 +378,7 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         <div className="flex items-center justify-between gap-2">
           <div>
             <h3 className="font-semibold text-sm">Due for {monthLabel(dueMonth)}</h3>
-            <p className="text-xs text-muted-foreground">Internship students not yet paid this month — adjust the amount if they got a partial allowance, then confirm</p>
+            <p className="text-xs text-muted-foreground">Internship and full-time job students not yet paid this month — adjust the amount if they got a partial allowance, then confirm</p>
           </div>
           <Badge variant="secondary">{dueList.length}</Badge>
         </div>
@@ -334,27 +389,42 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         ) : (
           <div className="space-y-2">
             {dueList.map(row => {
-              const amount = rowAmounts[row.internshipId] ?? row.maxAmount
-              const date = rowDates[row.internshipId] ?? format(new Date(), 'yyyy-MM-dd')
+              const amount = rowAmounts[row.key] ?? row.maxAmount
+              const date = rowDates[row.key] ?? format(new Date(), 'yyyy-MM-dd')
               const invalid = amount <= 0 || amount > row.maxAmount
               return (
-                <div key={row.internshipId} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+                <div key={row.key} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:flex-wrap sm:items-center">
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-sm truncate">{row.studentName} <span className="text-xs text-muted-foreground font-mono">({row.studentCode})</span></p>
-                    <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position} · {row.monthsPaid}/{row.cap} paid · up to {formatCurrency(row.maxAmount)}/mo</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="font-medium text-sm truncate">{row.studentName}</p>
+                      <span className="text-xs text-muted-foreground font-mono shrink-0">({row.studentCode})</span>
+                      <Badge
+                        variant="outline"
+                        className={`shrink-0 px-1.5 py-0 h-4 text-[10px] ${row.type === 'internship' ? 'text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:bg-blue-950/30' : 'text-violet-700 border-violet-200 bg-violet-50 dark:text-violet-400 dark:border-violet-900 dark:bg-violet-950/30'}`}
+                      >
+                        {row.type === 'internship' ? 'Internship' : 'Full-Time Job'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {row.startDate && `${formatDate(row.startDate)} – ${row.endDate ? formatDate(row.endDate) : 'present'} · `}
+                      {row.cap != null ? `${row.monthsPaid}/${row.cap} paid` : `${row.monthsPaid} paid`} · up to {formatCurrency(row.maxAmount)}/mo
+                    </p>
                   </div>
-                  <Input
-                    type="number" min={0} max={row.maxAmount} step="0.01" className="w-28 h-8"
-                    value={amount}
-                    onChange={e => setRowAmounts(a => ({ ...a, [row.internshipId]: Number(e.target.value) }))}
-                  />
-                  <Input
-                    type="date" className="w-36 h-8"
-                    value={date}
-                    onChange={e => setRowDates(d => ({ ...d, [row.internshipId]: e.target.value }))}
-                  />
-                  <Button size="sm" onClick={() => handleQuickConfirm(row)} disabled={confirmingId === row.internshipId || invalid}>
-                    {confirmingId === row.internshipId ? 'Confirming…' : 'Confirm'}
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:shrink-0">
+                    <Input
+                      type="number" min={0} max={row.maxAmount} step="0.01" className="h-8 w-full sm:w-24"
+                      value={amount}
+                      onChange={e => setRowAmounts(a => ({ ...a, [row.key]: Number(e.target.value) }))}
+                    />
+                    <Input
+                      type="date" className="h-8 w-full sm:w-36"
+                      value={date}
+                      onChange={e => setRowDates(d => ({ ...d, [row.key]: e.target.value }))}
+                    />
+                  </div>
+                  <Button size="sm" className="w-full sm:w-auto" onClick={() => handleQuickConfirm(row)} disabled={confirmingId === row.key || invalid}>
+                    {confirmingId === row.key ? 'Confirming…' : 'Confirm'}
                   </Button>
                 </div>
               )

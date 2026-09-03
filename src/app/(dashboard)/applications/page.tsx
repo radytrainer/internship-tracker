@@ -33,7 +33,7 @@ export default async function ApplicationsPage() {
 
   let studentsQuery = admin
     .from('students')
-    .select('id, first_name, last_name, student_code')
+    .select('id, first_name, last_name, student_code, status')
     .order('first_name')
 
   if (studentFilter) {

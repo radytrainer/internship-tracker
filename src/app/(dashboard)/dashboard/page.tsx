@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentProfile } from '@/lib/auth/server'
+import { getCurrentProfile, getEducationStaffClassIds } from '@/lib/auth/server'
 import { KPICards } from '@/components/dashboard/kpi-cards'
 import { NotAppliedStudentsCard } from '@/components/dashboard/not-applied-students-card'
 import { FunnelChart } from '@/components/dashboard/funnel-chart'
@@ -9,6 +9,7 @@ import { CompanyPerformance } from '@/components/dashboard/company-performance'
 import { AllowanceSalaryChart } from '@/components/dashboard/allowance-salary-chart'
 import { GenderPositionChart } from '@/components/dashboard/gender-position-chart'
 import { GenderSalaryChart } from '@/components/dashboard/gender-salary-chart'
+import { EducationReportSection } from '@/components/dashboard/education-report-section'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate, STUDENT_STATUS_COLORS, APPLICATION_STATUS_COLORS, LEAVE_STATUS_COLORS } from '@/lib/utils'
@@ -21,19 +22,27 @@ export default async function DashboardPage() {
   const { role, profile } = await getCurrentProfile()
 
   if (role === 'education_team') {
+    const educatorClassIds = profile ? await getEducationStaffClassIds(profile.id) : []
+    const classIdSet = new Set(educatorClassIds)
+
     const [{ data: leavesRaw }, { data: paymentsRaw }] = await Promise.all([
       supabase
         .from('student_leaves')
-        .select('id, status, start_date, end_date, created_at, student:students(first_name, last_name, student_code)')
+        .select('id, status, start_date, end_date, created_at, student:students(first_name, last_name, student_code, gender, class_id, class:classes(name))')
         .order('created_at', { ascending: false }),
       supabase
         .from('allowance_payments')
-        .select('id, amount, payment_date, student:students(first_name, last_name, student_code)')
+        .select('id, amount, payment_date, student:students(first_name, last_name, student_code, gender, class_id, class:classes(name))')
         .order('payment_date', { ascending: false }),
     ])
 
-    const leaves = leavesRaw ?? []
-    const payments = paymentsRaw ?? []
+    const student = (ref: unknown) => studentGroupInfo(ref as StudentRef)
+    const inScope = (ref: unknown) => {
+      const classId = student(ref).classId
+      return !!classId && classIdSet.has(classId)
+    }
+    const leaves = (leavesRaw ?? []).filter(l => inScope(l.student))
+    const payments = (paymentsRaw ?? []).filter(p => inScope(p.student))
 
     const pendingLeaves = leaves.filter(l => l.status === 'Pending').length
     const approvedLeaves = leaves.filter(l => l.status === 'Approved').length
@@ -44,6 +53,21 @@ export default async function DashboardPage() {
     const paymentsThisMonth = payments.filter(p => p.payment_date?.startsWith(thisMonthKey))
     const totalThisMonth = paymentsThisMonth.reduce((sum, p) => sum + Number(p.amount), 0)
     const totalAllTime = payments.reduce((sum, p) => sum + Number(p.amount), 0)
+
+    const allowanceByMonth = sumByGroup(
+      payments,
+      p => (p.payment_date as string)?.slice(0, 7) ?? 'Unknown',
+      p => Number(p.amount)
+    ).sort((a, b) => a.key.localeCompare(b.key))
+
+    const allowanceByGender = sumByGroup(payments, p => student(p.student).gender, p => Number(p.amount))
+
+    const allowanceByClass = sumByGroup(payments, p => student(p.student).className, p => Number(p.amount))
+      .sort((a, b) => b.total - a.total)
+
+    const leaveByGender = groupLeavesBy(leaves, l => student(l.student).gender)
+    const leaveByClass = groupLeavesBy(leaves, l => student(l.student).className)
+      .sort((a, b) => b.total - a.total)
 
     return (
       <div className="space-y-6">
@@ -58,6 +82,16 @@ export default async function DashboardPage() {
           <MetricCard label="Allowance Paid This Month" value={formatCurrency(totalThisMonth)} hint={`${paymentsThisMonth.length} payment${paymentsThisMonth.length !== 1 ? 's' : ''} confirmed`} icon={Wallet} color="text-teal-600" bg="bg-teal-50 dark:bg-teal-950/30" />
           <MetricCard label="Allowance Paid All-Time" value={formatCurrency(totalAllTime)} hint={`${payments.length} payment${payments.length !== 1 ? 's' : ''} total`} icon={Wallet} color="text-indigo-600" bg="bg-indigo-50 dark:bg-indigo-950/30" />
         </div>
+
+        <EducationReportSection
+          payments={payments}
+          allowanceByMonth={allowanceByMonth}
+          allowanceByGender={allowanceByGender}
+          allowanceByClass={allowanceByClass}
+          leaveByGender={leaveByGender}
+          leaveByClass={leaveByClass}
+          summary={{ pendingLeaves, approvedLeaves, rejectedLeaves, totalLeaves: leaves.length, totalAllTime, totalThisMonth }}
+        />
 
         <div className="grid gap-4 xl:grid-cols-2">
           <Card>
@@ -563,8 +597,7 @@ export default async function DashboardPage() {
     supabase.from('employment_records').select('student_id'),
     supabase
       .from('companies')
-      .select('id, company_name, internship_applications(count), internships(count)')
-      .limit(10),
+      .select('id, company_name, internship_applications(count), internships(count)'),
     supabase
       .from('internships')
       .select('allowance, companies(company_name), students(gender)')
@@ -627,12 +660,13 @@ export default async function DashboardPage() {
     application_count: (company.internship_applications as { count: number }[])?.[0]?.count ?? 0,
     internship_count: (company.internships as { count: number }[])?.[0]?.count ?? 0,
     employed_count: 0,
-  })).sort((a, b) => b.application_count - a.application_count)
+  })).sort((a, b) => b.internship_count - a.internship_count)
 
   const allowanceByCompany = buildStatsByGroup(
     internshipsRaw ?? [],
     row => (one(row.companies as { company_name: string }[] | { company_name: string } | null)?.company_name ?? 'Unknown'),
-    row => row.allowance as number
+    row => row.allowance as number,
+    Infinity
   )
   const allowanceByGender = buildStatsByGroup(
     internshipsRaw ?? [],
@@ -646,7 +680,8 @@ export default async function DashboardPage() {
   const salaryByCompany = buildStatsByGroup(
     employmentRaw ?? [],
     row => row.company_name as string,
-    row => row.salary as number
+    row => row.salary as number,
+    Infinity
   )
   const salaryByGender = buildStatsByGroup(
     employmentRaw ?? [],
@@ -805,6 +840,47 @@ function one<T>(value: T | T[] | null | undefined): T | null {
   return value ?? null
 }
 
+type StudentRef =
+  | { gender: string | null; class_id: string | null; class: { name: string }[] | { name: string } | null }
+  | { gender: string | null; class_id: string | null; class: { name: string }[] | { name: string } | null }[]
+  | null
+
+function studentGroupInfo(ref: StudentRef) {
+  const s = one(ref)
+  return {
+    gender: s?.gender ?? 'Unknown',
+    classId: s?.class_id ?? null,
+    className: one(s?.class ?? null)?.name ?? 'No class',
+  }
+}
+
+function sumByGroup<T>(rows: T[], getKey: (row: T) => string, getValue: (row: T) => number) {
+  const map = new Map<string, { total: number; count: number }>()
+  for (const row of rows) {
+    const key = getKey(row)
+    const value = getValue(row)
+    const entry = map.get(key) ?? { total: 0, count: 0 }
+    entry.total += value
+    entry.count += 1
+    map.set(key, entry)
+  }
+  return Array.from(map.entries()).map(([key, v]) => ({ key, ...v }))
+}
+
+function groupLeavesBy<T extends { status: string }>(rows: T[], getKey: (row: T) => string) {
+  const map = new Map<string, { total: number; pending: number; approved: number; rejected: number }>()
+  for (const row of rows) {
+    const key = getKey(row)
+    const entry = map.get(key) ?? { total: 0, pending: 0, approved: 0, rejected: 0 }
+    entry.total += 1
+    if (row.status === 'Pending') entry.pending += 1
+    else if (row.status === 'Approved') entry.approved += 1
+    else if (row.status === 'Rejected') entry.rejected += 1
+    map.set(key, entry)
+  }
+  return Array.from(map.entries()).map(([key, v]) => ({ key, ...v }))
+}
+
 function summarizeByKey<T>(rows: T[], getLabel: (row: T) => string) {
   const counts = new Map<string, number>()
   for (const row of rows) {
@@ -834,7 +910,8 @@ function buildGenderCountsByGroup(rows: { group: string; gender: string }[]) {
 function buildStatsByGroup(
   data: Record<string, unknown>[],
   getKey: (row: Record<string, unknown>) => string,
-  getValue: (row: Record<string, unknown>) => number
+  getValue: (row: Record<string, unknown>) => number,
+  limit = 8
 ) {
   const map: Record<string, number[]> = {}
   for (const row of data) {
@@ -849,5 +926,5 @@ function buildStatsByGroup(
     avg: Math.round(values.reduce((sum, value) => sum + value, 0) / values.length),
     min: Math.min(...values),
     max: Math.max(...values),
-  })).sort((a, b) => b.avg - a.avg).slice(0, 8)
+  })).sort((a, b) => b.avg - a.avg).slice(0, limit)
 }

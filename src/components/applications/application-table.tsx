@@ -18,7 +18,7 @@ import type { InternshipApplication } from '@/types/database.types'
 
 interface ApplicationTableProps {
   applications: InternshipApplication[]
-  students: { id: string; first_name: string; last_name: string; student_code: string }[]
+  students: { id: string; first_name: string; last_name: string; student_code: string; status?: string }[]
   companies: { id: string; company_name: string }[]
   positions: { id: string; position_name: string; company_id: string; max_students: number; intake_date?: string | null; is_active: boolean }[]
   role: AppRole

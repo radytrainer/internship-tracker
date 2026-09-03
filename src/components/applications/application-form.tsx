@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { createApplication, createApplicationWithOverride, updateApplication } from '@/app/actions/applications'
+import { ALREADY_PLACED_STATUSES } from '@/lib/utils'
 import type { AppRole } from '@/lib/roles'
 import type { InternshipApplication } from '@/types/database.types'
 
@@ -32,7 +33,7 @@ interface ApplicationFormProps {
   open: boolean
   onClose: () => void
   application: InternshipApplication | null
-  students: { id: string; first_name: string; last_name: string; student_code: string }[]
+  students: { id: string; first_name: string; last_name: string; student_code: string; status?: string }[]
   companies: { id: string; company_name: string }[]
   positions: { id: string; position_name: string; company_id: string; max_students: number; intake_date?: string | null; is_active: boolean }[]
   role: AppRole
@@ -67,6 +68,10 @@ export function ApplicationForm({
 
   const selectedCompanyId = form.watch('company_id')
   const filteredPositions = positions.filter(p => p.company_id === selectedCompanyId && p.is_active)
+
+  // hide students who already passed an interview and hold an internship/job, unless
+  // they're the student already assigned to this application (so editing doesn't break)
+  const studentOptions = students.filter(s => s.id === application?.student_id || !ALREADY_PLACED_STATUSES.has(s.status ?? ''))
 
   useEffect(() => {
     if (application) {
@@ -138,7 +143,7 @@ export function ApplicationForm({
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select student" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {students.map(student => (
+                        {studentOptions.map(student => (
                           <SelectItem key={student.id} value={student.id}>
                             {student.first_name} {student.last_name} ({student.student_code})
                           </SelectItem>
