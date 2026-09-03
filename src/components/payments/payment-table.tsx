@@ -255,6 +255,7 @@ export function PaymentTable({ payments, students, internships, employmentRecord
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
 
   const dueMonth = selectedMonth === 'all' ? format(new Date(), 'yyyy-MM') : selectedMonth
+  const isAllTimeDue = selectedMonth === 'all'
 
   const dueList = useMemo(() => {
     const today = format(new Date(), 'yyyy-MM-dd')
@@ -265,7 +266,7 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         const cap = allowanceMonthCap(i.start_date, i.end_date)
         const internshipPayments = payments.filter(p => p.internship_id === i.id)
         if (internshipPayments.length >= cap) return null
-        if (internshipPayments.some(p => monthKey(p.payment_date) === dueMonth)) return null
+        if (!isAllTimeDue && internshipPayments.some(p => monthKey(p.payment_date) === selectedMonth)) return null
         const student = students.find(s => s.id === i.student_id)
         if (!student) return null
         const maxAmount = schoolAllowanceShare(i.allowance)
@@ -302,7 +303,7 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         const cap = allowanceMonthCap(e.start_date, e.end_date)
         const employmentPayments = payments.filter(p => p.employment_id === e.id)
         if (employmentPayments.length >= cap) return null
-        if (employmentPayments.some(p => monthKey(p.payment_date) === dueMonth)) return null
+        if (!isAllTimeDue && employmentPayments.some(p => monthKey(p.payment_date) === selectedMonth)) return null
         const student = students.find(s => s.id === e.student_id)
         if (!student) return null
         const maxAmount = employmentPncContribution(e.salary)
@@ -334,7 +335,7 @@ export function PaymentTable({ payments, students, internships, employmentRecord
       .filter((row): row is NonNullable<typeof row> => row !== null)
 
     return [...internshipRows, ...employmentRows]
-  }, [internships, employmentRecords, payments, students, dueMonth])
+  }, [internships, employmentRecords, payments, students, selectedMonth, isAllTimeDue])
 
   const allProgress = useMemo(() => {
     const internshipRows = internships
@@ -533,14 +534,18 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         <div className="rounded-lg border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h3 className="font-semibold text-sm">Due for {monthLabel(dueMonth)}</h3>
-              <p className="text-xs text-muted-foreground">Internship and full-time job students not yet paid this month — adjust the amount if they got a partial allowance, then confirm</p>
+              <h3 className="font-semibold text-sm">{isAllTimeDue ? 'All Outstanding Payments' : `Due for ${monthLabel(dueMonth)}`}</h3>
+              <p className="text-xs text-muted-foreground">
+                {isAllTimeDue
+                  ? 'Internship and full-time job students with a remaining balance — adjust the amount if they got a partial allowance, then confirm'
+                  : 'Internship and full-time job students not yet paid this month — adjust the amount if they got a partial allowance, then confirm'}
+              </p>
             </div>
             <Badge variant="secondary">{dueList.length}</Badge>
           </div>
           {dueList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4 flex items-center justify-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />Everyone is paid up for this month
+              <CheckCircle2 className="h-4 w-4 text-green-500" />{isAllTimeDue ? 'Everyone is fully paid up' : 'Everyone is paid up for this month'}
             </p>
           ) : (
             <div className="space-y-2">
