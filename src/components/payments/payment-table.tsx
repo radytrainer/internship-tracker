@@ -548,7 +548,7 @@ export function PaymentTable({ payments, students, internships, employmentRecord
               <CheckCircle2 className="h-4 w-4 text-green-500" />{isAllTimeDue ? 'Everyone is fully paid up' : 'Everyone is paid up for this month'}
             </p>
           ) : (
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {dueList.map(row => {
                 const amount = rowAmounts[row.key] ?? row.payableMax
                 const date = rowDates[row.key] ?? format(new Date(), 'yyyy-MM-dd')
@@ -557,87 +557,84 @@ export function PaymentTable({ payments, students, internships, employmentRecord
                 const isSavingTotal = savingTotal === row.key
                 const progressPct = Math.min(100, Math.round((row.monthsPaid / row.cap) * 100))
                 return (
-                  <div key={row.key} className="rounded-lg border p-3 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                          style={{ background: avatarColor(row.studentName) }}
-                        >
-                          {getInitials(row.studentName)}
+                  <div key={row.key} className="rounded-lg border p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-white text-[11px] font-bold"
+                        style={{ background: avatarColor(row.studentName) }}
+                      >
+                        {getInitials(row.studentName)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-sm truncate">{row.studentName}</p>
+                          <span className="text-[11px] text-muted-foreground font-mono shrink-0">{row.studentCode}</span>
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{row.studentName} <span className="text-xs text-muted-foreground font-mono font-normal">({row.studentCode})</span></p>
-                          <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position}</p>
-                        </div>
+                        <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position}</p>
                       </div>
                       <Badge
                         variant="outline"
                         className={`shrink-0 px-1.5 py-0 h-4 text-[10px] ${row.type === 'internship' ? 'text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:bg-blue-950/30' : 'text-violet-700 border-violet-200 bg-violet-50 dark:text-violet-400 dark:border-violet-900 dark:bg-violet-950/30'}`}
                       >
-                        {row.type === 'internship' ? 'Internship' : 'Full-Time Job'}
+                        {row.type === 'internship' ? 'Internship' : 'Job'}
                       </Badge>
                     </div>
-  
-                    <div className="rounded-md bg-muted/50 p-2.5 space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                        <span>{row.startDate && `${formatDate(row.startDate)} – ${row.endDate ? formatDate(row.endDate) : 'present'} · `}{formatCurrency(row.maxAmount)}/mo</span>
-                        <span>{row.monthsPaid}/{row.cap} paid</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
                         <div className={`h-full ${row.type === 'internship' ? 'bg-blue-500' : 'bg-violet-500'}`} style={{ width: `${progressPct}%` }} />
                       </div>
-                      <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs pt-0.5">
-                        <span className="text-muted-foreground">{formatCurrency(row.remaining)} remaining</span>
-                        {isEditingTotal ? (
-                          <span className="flex items-center gap-1">
-                            <span className="text-muted-foreground">Total</span>
-                            <Input
-                              type="number" min={0} step="0.01" autoFocus
-                              className="h-6 w-20 px-1.5 text-xs"
-                              value={totalDrafts[row.key] ?? ''}
-                              disabled={isSavingTotal}
-                              onChange={e => setTotalDrafts(d => ({ ...d, [row.key]: e.target.value }))}
-                              onKeyDown={e => { if (e.key === 'Enter') confirmEditTotal(row); if (e.key === 'Escape') cancelEditTotal(row.key) }}
-                            />
-                            <button type="button" title="Save" disabled={isSavingTotal} className="text-green-600 hover:text-green-700 disabled:opacity-50" onClick={() => confirmEditTotal(row)}>
-                              <Check className="h-3.5 w-3.5" />
-                            </button>
-                            <button type="button" title="Cancel" disabled={isSavingTotal} className="text-muted-foreground hover:text-foreground disabled:opacity-50" onClick={() => cancelEditTotal(row.key)}>
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <span className="text-muted-foreground">Total {formatCurrency(row.totalOwed)}</span>
-                            <button type="button" title="Edit total owed" className="text-muted-foreground hover:text-foreground" onClick={() => startEditTotal(row)}>
-                              <Pencil className="h-3 w-3" />
-                            </button>
-                            {row.hasOverride && (
-                              <button type="button" title="Reset to the standard amount × months total" className="text-muted-foreground hover:text-foreground" onClick={() => saveTotalOverride(row, null)}>
-                                <RotateCcw className="h-3 w-3" />
-                              </button>
-                            )}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-[11px] text-muted-foreground shrink-0">{row.monthsPaid}/{row.cap}</span>
                     </div>
-  
-                    <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">
-                      <div className="grid grid-cols-2 gap-2 flex-1">
-                        <Input
-                          type="number" min={0} max={row.payableMax} step="0.01" className="h-8 w-full"
-                          value={amount}
-                          onChange={e => setRowAmounts(a => ({ ...a, [row.key]: Number(e.target.value) }))}
-                        />
-                        <Input
-                          type="date" className="h-8 w-full"
-                          value={date}
-                          onChange={e => setRowDates(d => ({ ...d, [row.key]: e.target.value }))}
-                        />
-                      </div>
-                      <Button size="sm" className="w-full sm:w-auto" onClick={() => handleQuickConfirm(row)} disabled={confirmingId === row.key || invalid}>
-                        {confirmingId === row.key ? 'Confirming…' : 'Confirm'}
+
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs">
+                      <span className="text-muted-foreground">{formatCurrency(row.remaining)} remaining</span>
+                      {isEditingTotal ? (
+                        <span className="flex items-center gap-1">
+                          <span className="text-muted-foreground">Total</span>
+                          <Input
+                            type="number" min={0} step="0.01" autoFocus
+                            className="h-6 w-20 px-1.5 text-xs"
+                            value={totalDrafts[row.key] ?? ''}
+                            disabled={isSavingTotal}
+                            onChange={e => setTotalDrafts(d => ({ ...d, [row.key]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') confirmEditTotal(row); if (e.key === 'Escape') cancelEditTotal(row.key) }}
+                          />
+                          <button type="button" title="Save" disabled={isSavingTotal} className="text-green-600 hover:text-green-700 disabled:opacity-50" onClick={() => confirmEditTotal(row)}>
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                          <button type="button" title="Cancel" disabled={isSavingTotal} className="text-muted-foreground hover:text-foreground disabled:opacity-50" onClick={() => cancelEditTotal(row.key)}>
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          of {formatCurrency(row.totalOwed)}
+                          <button type="button" title="Edit total owed" className="hover:text-foreground" onClick={() => startEditTotal(row)}>
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          {row.hasOverride && (
+                            <button type="button" title="Reset to the standard amount × months total" className="hover:text-foreground" onClick={() => saveTotalOverride(row, null)}>
+                              <RotateCcw className="h-3 w-3" />
+                            </button>
+                          )}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number" min={0} max={row.payableMax} step="0.01" className="h-8 w-16 shrink-0 px-2"
+                        value={amount}
+                        onChange={e => setRowAmounts(a => ({ ...a, [row.key]: Number(e.target.value) }))}
+                      />
+                      <Input
+                        type="date" className="h-8 flex-1 min-w-0 px-2"
+                        value={date}
+                        onChange={e => setRowDates(d => ({ ...d, [row.key]: e.target.value }))}
+                      />
+                      <Button size="sm" className="h-8 shrink-0 px-3" onClick={() => handleQuickConfirm(row)} disabled={confirmingId === row.key || invalid}>
+                        {confirmingId === row.key ? '…' : 'Confirm'}
                       </Button>
                     </div>
                   </div>
