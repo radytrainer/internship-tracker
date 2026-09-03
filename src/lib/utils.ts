@@ -28,6 +28,15 @@ export function getInitials(name: string | null | undefined) {
   return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2)
 }
 
+const AVATAR_COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#ef4444', '#22c55e']
+
+export function avatarColor(name: string | null | undefined) {
+  const value = name ?? ''
+  let h = 0
+  for (let i = 0; i < value.length; i++) h = (h * 31 + value.charCodeAt(i)) % AVATAR_COLORS.length
+  return AVATAR_COLORS[h]
+}
+
 export const STUDENT_STATUS_COLORS: Record<string, string> = {
   'Studying': 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
   'Looking For Internship': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
