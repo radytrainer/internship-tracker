@@ -392,9 +392,9 @@ export function PaymentTable({ payments, students, internships, employmentRecord
       .filter((row): row is NonNullable<typeof row> => row !== null)
 
     return [...internshipRows, ...employmentRows].sort((a, b) => {
-      const statusRank = (r: typeof a) => r.remaining <= 0 ? 2 : r.monthsPaid === 0 ? 0 : 1
-      const rankDiff = statusRank(a) - statusRank(b)
-      if (rankDiff !== 0) return rankDiff
+      const progressOf = (r: typeof a) => r.totalOwed > 0 ? (r.totalOwed - r.remaining) / r.totalOwed : 1
+      const progressDiff = progressOf(a) - progressOf(b)
+      if (progressDiff !== 0) return progressDiff
       return a.studentName.localeCompare(b.studentName)
     })
   }, [internships, employmentRecords, payments, students])
