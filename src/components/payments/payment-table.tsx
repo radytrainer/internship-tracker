@@ -335,6 +335,69 @@ export function PaymentTable({ payments, students, internships, employmentRecord
     return [...internshipRows, ...employmentRows]
   }, [internships, employmentRecords, payments, students, dueMonth])
 
+  const allProgress = useMemo(() => {
+    const internshipRows = internships
+      .filter(i => i.allowance != null)
+      .map(i => {
+        const cap = allowanceMonthCap(i.start_date, i.end_date)
+        const internshipPayments = payments.filter(p => p.internship_id === i.id)
+        const student = students.find(s => s.id === i.student_id)
+        if (!student) return null
+        const maxAmount = schoolAllowanceShare(i.allowance)
+        const paidAmount = internshipPayments.reduce((s, p) => s + Number(p.amount), 0)
+        const totalOwed = i.allowance_total_override ?? maxAmount * cap
+        const remaining = Math.max(0, totalOwed - paidAmount)
+        return {
+          key: `internship-${i.id}`,
+          type: 'internship' as const,
+          studentName: `${student.first_name} ${student.last_name}`,
+          studentCode: student.student_code as string,
+          companyName: i.company?.company_name ?? 'Unknown company',
+          position: i.position as string,
+          maxAmount,
+          monthsPaid: Math.min(internshipPayments.length, cap),
+          cap,
+          totalOwed,
+          remaining,
+        }
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+
+    const employmentRows = employmentRecords
+      .filter(e => e.salary != null)
+      .map(e => {
+        const cap = allowanceMonthCap(e.start_date, e.end_date)
+        const employmentPayments = payments.filter(p => p.employment_id === e.id)
+        const student = students.find(s => s.id === e.student_id)
+        if (!student) return null
+        const maxAmount = employmentPncContribution(e.salary)
+        const paidAmount = employmentPayments.reduce((s, p) => s + Number(p.amount), 0)
+        const totalOwed = e.allowance_total_override ?? maxAmount * cap
+        const remaining = Math.max(0, totalOwed - paidAmount)
+        return {
+          key: `employment-${e.id}`,
+          type: 'employment' as const,
+          studentName: `${student.first_name} ${student.last_name}`,
+          studentCode: student.student_code as string,
+          companyName: e.company_name ?? 'Unknown company',
+          position: e.position as string,
+          maxAmount,
+          monthsPaid: Math.min(employmentPayments.length, cap),
+          cap,
+          totalOwed,
+          remaining,
+        }
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+
+    return [...internshipRows, ...employmentRows].sort((a, b) => {
+      const statusRank = (r: typeof a) => r.remaining <= 0 ? 2 : r.monthsPaid === 0 ? 0 : 1
+      const rankDiff = statusRank(a) - statusRank(b)
+      if (rankDiff !== 0) return rankDiff
+      return a.studentName.localeCompare(b.studentName)
+    })
+  }, [internships, employmentRecords, payments, students])
+
   const handleQuickConfirm = async (row: (typeof dueList)[number]) => {
     const amount = rowAmounts[row.key] ?? row.payableMax
     if (amount <= 0 || amount > row.payableMax) return
@@ -398,6 +461,12 @@ export function PaymentTable({ payments, students, internships, employmentRecord
     const name = `${p.student?.first_name ?? ''} ${p.student?.last_name ?? ''}`.toLowerCase()
     return !q || name.includes(q) || p.student?.student_code?.toLowerCase().includes(q)
   }), [payments, search, selectedMonth])
+
+  const progressFiltered = useMemo(() => {
+    const q = search.toLowerCase()
+    if (!q) return allProgress
+    return allProgress.filter(row => row.studentName.toLowerCase().includes(q) || row.studentCode.toLowerCase().includes(q))
+  }, [allProgress, search])
 
   const selectedTotal = selectedMonth === 'all'
     ? payments.reduce((sum, p) => sum + Number(p.amount), 0)
@@ -567,6 +636,91 @@ export function PaymentTable({ payments, students, internships, employmentRecord
       <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search by student name or code..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+
+      <div className="rounded-lg border bg-card p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-sm">Student Payment Progress</h3>
+            <p className="text-xs text-muted-foreground">Every internship/full-time job student tracked for allowance — my class or all classes, per the toggle above</p>
+          </div>
+          <Badge variant="secondary">{progressFiltered.length}</Badge>
+        </div>
+        {progressFiltered.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No students found</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead className="min-w-[160px]">Progress</TableHead>
+                  <TableHead className="text-right">Remaining</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {progressFiltered.map(row => {
+                  const pct = Math.min(100, Math.round((row.monthsPaid / row.cap) * 100))
+                  const fullyPaid = row.remaining <= 0
+                  const notStarted = row.monthsPaid === 0
+                  return (
+                    <TableRow key={row.key}>
+                      <TableCell>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                            style={{ background: avatarColor(row.studentName) }}
+                          >
+                            {getInitials(row.studentName)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{row.studentName}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{row.studentCode}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        <span className={`text-[10px] uppercase tracking-wide font-semibold mr-1 ${row.type === 'internship' ? 'text-blue-600' : 'text-violet-600'}`}>
+                          {row.type === 'internship' ? 'Internship' : 'Job'}
+                        </span>
+                        {row.companyName} — {row.position}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 flex-1 min-w-[60px] rounded-full bg-muted overflow-hidden">
+                            <div className={`h-full ${row.type === 'internship' ? 'bg-blue-500' : 'bg-violet-500'}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground shrink-0">{row.monthsPaid}/{row.cap}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right text-sm whitespace-nowrap">
+                        <span className="font-semibold">{formatCurrency(row.remaining)}</span>
+                        <span className="text-muted-foreground"> / {formatCurrency(row.totalOwed)}</span>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {fullyPaid ? (
+                          <Badge className="gap-1 whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border-transparent">
+                            <CheckCircle2 className="h-3 w-3" />Fully Paid
+                          </Badge>
+                        ) : notStarted ? (
+                          <Badge variant="outline" className="whitespace-nowrap text-amber-700 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-900 dark:bg-amber-950/30">
+                            Not Started
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="whitespace-nowrap text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:bg-blue-950/30">
+                            In Progress
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card overflow-x-auto">
