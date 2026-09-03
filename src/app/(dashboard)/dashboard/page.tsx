@@ -24,9 +24,11 @@ export default async function DashboardPage() {
 
   if (role === 'education_team') {
     const educatorClassIds = profile ? await getEducationStaffClassIds(profile.id) : []
-    const classIdSet = new Set(educatorClassIds)
 
-    const [{ data: leavesRaw }, { data: paymentsRaw }, { data: classesRaw }] = await Promise.all([
+    // RLS grants education_team read access to leaves/payments school-wide (not just their
+    // own classes), same as the Payments page's "All Classes" toggle — so fetch everything
+    // here too and let the client scope it, instead of baking a class restriction into the query.
+    const [{ data: leaves }, { data: payments }, { data: allClasses }] = await Promise.all([
       supabase
         .from('student_leaves')
         .select('id, status, start_date, end_date, created_at, student:students(first_name, last_name, student_code, gender, class_id, class:classes(name))')
@@ -35,20 +37,20 @@ export default async function DashboardPage() {
         .from('allowance_payments')
         .select('id, amount, payment_date, student:students(first_name, last_name, student_code, gender, class_id, class:classes(name))')
         .order('payment_date', { ascending: false }),
-      educatorClassIds.length > 0
-        ? supabase.from('classes').select('id, name').in('id', educatorClassIds).order('name')
-        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      supabase.from('classes').select('id, name').order('name'),
     ])
 
-    const classIdOf = (ref: unknown) => one(ref as { class_id: string | null } | { class_id: string | null }[] | null)?.class_id ?? null
-    const inScope = (ref: unknown) => {
-      const classId = classIdOf(ref)
-      return !!classId && classIdSet.has(classId)
-    }
-    const leaves = (leavesRaw ?? []).filter(l => inScope(l.student))
-    const payments = (paymentsRaw ?? []).filter(p => inScope(p.student))
+    const myClassIdSet = new Set(educatorClassIds)
+    const myClasses = (allClasses ?? []).filter(c => myClassIdSet.has(c.id))
 
-    return <EducationDashboardClient leaves={leaves} payments={payments} classes={classesRaw ?? []} />
+    return (
+      <EducationDashboardClient
+        leaves={leaves ?? []}
+        payments={payments ?? []}
+        myClasses={myClasses}
+        allClasses={allClasses ?? []}
+      />
+    )
   }
 
   if (role === 'student') {

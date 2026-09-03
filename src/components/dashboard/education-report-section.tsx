@@ -23,6 +23,7 @@ interface EducationReportSectionProps {
   allowanceByClass: GroupStat[]
   leaveByGender: LeaveGroupStat[]
   leaveByClass: LeaveGroupStat[]
+  scopeLabel?: string
   summary: {
     pendingLeaves: number
     approvedLeaves: number
@@ -113,7 +114,7 @@ function LeaveRankedList({ data }: { data: LeaveGroupStat[] }) {
 }
 
 export function EducationReportSection({
-  payments, allowanceByMonth, allowanceByGender, allowanceByClass, leaveByGender, leaveByClass, summary,
+  payments, allowanceByMonth, allowanceByGender, allowanceByClass, leaveByGender, leaveByClass, scopeLabel, summary,
 }: EducationReportSectionProps) {
   const [exportingPdf, setExportingPdf] = useState(false)
 
@@ -141,7 +142,7 @@ export function EducationReportSection({
     try {
       await exportReportPDF({
         title: 'Allowance & Leave Report',
-        subtitle: 'My Class',
+        subtitle: scopeLabel ?? 'My Class',
         kpis: [
           { label: 'Allowance All-Time', value: formatCurrency(summary.totalAllTime) },
           { label: 'Allowance This Month', value: formatCurrency(summary.totalThisMonth) },
@@ -188,7 +189,7 @@ export function EducationReportSection({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">Detailed Reports</h2>
-          <p className="text-sm text-muted-foreground">Allowance and leave activity for your class</p>
+          <p className="text-sm text-muted-foreground">Allowance and leave activity for {scopeLabel ?? 'your class'}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={handleExportExcel}>

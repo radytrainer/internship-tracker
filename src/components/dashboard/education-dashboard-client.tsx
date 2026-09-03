@@ -15,7 +15,8 @@ type AnyRecord = any
 interface EducationDashboardClientProps {
   leaves: AnyRecord[]
   payments: AnyRecord[]
-  classes: { id: string; name: string }[]
+  myClasses: { id: string; name: string }[]
+  allClasses: { id: string; name: string }[]
 }
 
 type StudentRef =
@@ -68,11 +69,14 @@ function monthLabel(key: string) {
   return format(parseISO(`${key}-01`), 'MMMM yyyy')
 }
 
-export function EducationDashboardClient({ leaves, payments, classes }: EducationDashboardClientProps) {
-  const [classFilter, setClassFilter] = useState('all')
+export function EducationDashboardClient({ leaves, payments, myClasses, allClasses }: EducationDashboardClientProps) {
+  const [classFilter, setClassFilter] = useState(myClasses.length > 0 ? 'mine' : 'all')
   const [monthFilter, setMonthFilter] = useState('all')
 
   const student = (ref: unknown) => studentGroupInfo(ref as StudentRef)
+  const myClassIdSet = useMemo(() => new Set(myClasses.map(c => c.id)), [myClasses])
+
+  const classFilterLabel = classFilter === 'mine' ? 'My Classes' : classFilter === 'all' ? 'All Classes' : (allClasses.find(c => c.id === classFilter)?.name ?? '')
 
   const availableMonths = useMemo(() => {
     const set = new Set<string>()
@@ -84,12 +88,18 @@ export function EducationDashboardClient({ leaves, payments, classes }: Educatio
 
   const classFiltered = useMemo(() => {
     if (classFilter === 'all') return { leaves, payments }
+    if (classFilter === 'mine') {
+      return {
+        leaves: leaves.filter(l => myClassIdSet.has(student(l.student).classId ?? '')),
+        payments: payments.filter(p => myClassIdSet.has(student(p.student).classId ?? '')),
+      }
+    }
     return {
       leaves: leaves.filter(l => student(l.student).classId === classFilter),
       payments: payments.filter(p => student(p.student).classId === classFilter),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leaves, payments, classFilter])
+  }, [leaves, payments, classFilter, myClassIdSet])
 
   const filtered = useMemo(() => {
     if (monthFilter === 'all') return classFiltered
@@ -128,8 +138,9 @@ export function EducationDashboardClient({ leaves, payments, classes }: Educatio
           <Select value={classFilter} onValueChange={setClassFilter}>
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
+              {myClasses.length > 0 && <SelectItem value="mine">My Classes</SelectItem>}
               <SelectItem value="all">All Classes</SelectItem>
-              {classes.map(c => (
+              {allClasses.map(c => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>
@@ -160,13 +171,13 @@ export function EducationDashboardClient({ leaves, payments, classes }: Educatio
         <MetricCard
           label="Allowance Paid (Selected Period)"
           value={formatCurrency(totalSelected)}
-          hint={`${filtered.payments.length} payment${filtered.payments.length !== 1 ? 's' : ''} · ${monthLabel(monthFilter)}${classFilter !== 'all' ? ` · ${classes.find(c => c.id === classFilter)?.name ?? ''}` : ''}`}
+          hint={`${filtered.payments.length} payment${filtered.payments.length !== 1 ? 's' : ''} · ${monthLabel(monthFilter)} · ${classFilterLabel}`}
           icon={Wallet} color="text-teal-600" bg="bg-teal-50 dark:bg-teal-950/30"
         />
         <MetricCard
           label="Allowance Paid All-Time"
           value={formatCurrency(totalAllTime)}
-          hint={`${classFiltered.payments.length} payment${classFiltered.payments.length !== 1 ? 's' : ''} total${classFilter !== 'all' ? ` · ${classes.find(c => c.id === classFilter)?.name ?? ''}` : ''}`}
+          hint={`${classFiltered.payments.length} payment${classFiltered.payments.length !== 1 ? 's' : ''} total · ${classFilterLabel}`}
           icon={Wallet} color="text-indigo-600" bg="bg-indigo-50 dark:bg-indigo-950/30"
         />
       </div>
@@ -178,6 +189,7 @@ export function EducationDashboardClient({ leaves, payments, classes }: Educatio
         allowanceByClass={allowanceByClass}
         leaveByGender={leaveByGender}
         leaveByClass={leaveByClass}
+        scopeLabel={classFilterLabel}
         summary={{ pendingLeaves, approvedLeaves, rejectedLeaves, totalLeaves: filtered.leaves.length, totalAllTime, totalThisMonth: totalSelected }}
       />
 
