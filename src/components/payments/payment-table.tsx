@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet, CheckCircle2 } from 'lucide-react'
 import { createPayment, updatePayment, deletePayment, type PaymentFormData } from '@/app/actions/payments'
-import { formatDate, formatCurrency, internshipAllowanceMonthCap, schoolAllowanceShare, STUDENT_ALLOWANCE_KEEP, employmentPncPercent, employmentPncContribution } from '@/lib/utils'
+import { formatDate, formatCurrency, allowanceMonthCap, schoolAllowanceShare, STUDENT_ALLOWANCE_KEEP, employmentPncPercent, employmentPncContribution } from '@/lib/utils'
 import { toast } from 'sonner'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -58,16 +58,29 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
   const studentEmploymentRecords = employmentRecords.filter(e => e.student_id === form.student_id)
 
   const selectedInternship = internships.find(i => i.id === form.internship_id) ?? null
-  const allowanceCap = selectedInternship ? internshipAllowanceMonthCap(selectedInternship.start_date, selectedInternship.end_date) : null
+  const allowanceCap = selectedInternship ? allowanceMonthCap(selectedInternship.start_date, selectedInternship.end_date) : null
   const schoolAmount = selectedInternship ? schoolAllowanceShare(selectedInternship.allowance) : null
-  const monthsUsed = selectedInternship
-    ? payments.filter(p => p.internship_id === selectedInternship.id && p.id !== payment?.id).length
-    : 0
+  const internshipOtherPayments = selectedInternship
+    ? payments.filter(p => p.internship_id === selectedInternship.id && p.id !== payment?.id)
+    : []
+  const monthsUsed = internshipOtherPayments.length
   const capReached = allowanceCap != null && monthsUsed >= allowanceCap
+  const internshipPaidAmount = internshipOtherPayments.reduce((s, p) => s + Number(p.amount), 0)
+  const internshipTotalOwed = allowanceCap != null && schoolAmount != null ? schoolAmount * allowanceCap : null
+  const internshipRemaining = internshipTotalOwed != null ? Math.max(0, internshipTotalOwed - internshipPaidAmount) : null
 
   const selectedEmployment = employmentRecords.find(e => e.id === form.employment_id) ?? null
   const employmentPercent = selectedEmployment ? employmentPncPercent(selectedEmployment.salary) : null
   const employmentAmount = selectedEmployment ? employmentPncContribution(selectedEmployment.salary) : null
+  const employmentCap = selectedEmployment ? allowanceMonthCap(selectedEmployment.start_date, selectedEmployment.end_date) : null
+  const employmentOtherPayments = selectedEmployment
+    ? payments.filter(p => p.employment_id === selectedEmployment.id && p.id !== payment?.id)
+    : []
+  const employmentMonthsUsed = employmentOtherPayments.length
+  const employmentCapReached = employmentCap != null && employmentMonthsUsed >= employmentCap
+  const employmentPaidAmount = employmentOtherPayments.reduce((s, p) => s + Number(p.amount), 0)
+  const employmentTotalOwed = employmentCap != null && employmentAmount != null ? employmentAmount * employmentCap : null
+  const employmentRemaining = employmentTotalOwed != null ? Math.max(0, employmentTotalOwed - employmentPaidAmount) : null
 
   const maxAmount = selectedInternship ? schoolAmount : selectedEmployment ? employmentAmount : null
 
@@ -128,7 +141,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
             {selectedInternship && (
               <p className={`text-xs ${capReached ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
                 Student keeps {formatCurrency(STUDENT_ALLOWANCE_KEEP)} of {formatCurrency(selectedInternship.allowance)}/mo — up to {formatCurrency(schoolAmount)}/mo can go to the school.
-                {' '}{monthsUsed} of {allowanceCap} month{allowanceCap === 1 ? '' : 's'} recorded.
+                {' '}{monthsUsed} of {allowanceCap} month{allowanceCap === 1 ? '' : 's'} recorded — {formatCurrency(internshipRemaining)} of {formatCurrency(internshipTotalOwed)} left to pay.
                 {capReached && ' This internship has reached its allowance payment limit.'}
                 {!capReached && ' Lower the amount below if the student received a partial allowance this month.'}
               </p>
@@ -162,8 +175,11 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
               </SelectContent>
             </Select>
             {selectedEmployment && (
-              <p className="text-xs text-muted-foreground">
+              <p className={`text-xs ${employmentCapReached ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
                 Full-time employment contributes {Math.round((employmentPercent ?? 0) * 100)}% of {formatCurrency(selectedEmployment.salary)}/mo gross salary — up to {formatCurrency(employmentAmount)}/mo to PNC.
+                {' '}{employmentMonthsUsed} of {employmentCap} month{employmentCap === 1 ? '' : 's'} recorded — {formatCurrency(employmentRemaining)} of {formatCurrency(employmentTotalOwed)} left to pay.
+                {employmentCapReached && ' This full-time job has reached its allowance payment limit.'}
+                {!employmentCapReached && ' Lower the amount below if the student contributed less this month.'}
               </p>
             )}
           </div>
@@ -195,7 +211,7 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={saving || !form.student_id || form.amount <= 0 || (maxAmount != null && form.amount > maxAmount) || capReached}>
+            <Button type="submit" disabled={saving || !form.student_id || form.amount <= 0 || (maxAmount != null && form.amount > maxAmount) || capReached || employmentCapReached}>
               {saving ? 'Saving…' : payment ? 'Save Changes' : 'Confirm Payment'}
             </Button>
           </DialogFooter>
@@ -237,12 +253,15 @@ export function PaymentTable({ payments, students, internships, employmentRecord
     const internshipRows = internships
       .filter(i => i.allowance != null && (!i.start_date || i.start_date <= today))
       .map(i => {
-        const cap = internshipAllowanceMonthCap(i.start_date, i.end_date)
+        const cap = allowanceMonthCap(i.start_date, i.end_date)
         const internshipPayments = payments.filter(p => p.internship_id === i.id)
         if (internshipPayments.length >= cap) return null
         if (internshipPayments.some(p => monthKey(p.payment_date) === dueMonth)) return null
         const student = students.find(s => s.id === i.student_id)
         if (!student) return null
+        const maxAmount = schoolAllowanceShare(i.allowance)
+        const paidAmount = internshipPayments.reduce((s, p) => s + Number(p.amount), 0)
+        const totalOwed = maxAmount * cap
         return {
           key: `internship-${i.id}`,
           type: 'internship' as const,
@@ -255,9 +274,11 @@ export function PaymentTable({ payments, students, internships, employmentRecord
           position: i.position as string,
           startDate: i.start_date as string | null,
           endDate: i.end_date as string | null,
-          maxAmount: schoolAllowanceShare(i.allowance),
+          maxAmount,
           monthsPaid: internshipPayments.length,
-          cap: cap as number | null,
+          cap,
+          totalOwed,
+          remaining: Math.max(0, totalOwed - paidAmount),
         }
       })
       .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -265,10 +286,15 @@ export function PaymentTable({ payments, students, internships, employmentRecord
     const employmentRows = employmentRecords
       .filter(e => e.salary != null && (!e.start_date || e.start_date <= today) && (!e.end_date || e.end_date >= today))
       .map(e => {
+        const cap = allowanceMonthCap(e.start_date, e.end_date)
         const employmentPayments = payments.filter(p => p.employment_id === e.id)
+        if (employmentPayments.length >= cap) return null
         if (employmentPayments.some(p => monthKey(p.payment_date) === dueMonth)) return null
         const student = students.find(s => s.id === e.student_id)
         if (!student) return null
+        const maxAmount = employmentPncContribution(e.salary)
+        const paidAmount = employmentPayments.reduce((s, p) => s + Number(p.amount), 0)
+        const totalOwed = maxAmount * cap
         return {
           key: `employment-${e.id}`,
           type: 'employment' as const,
@@ -281,9 +307,11 @@ export function PaymentTable({ payments, students, internships, employmentRecord
           position: e.position as string,
           startDate: e.start_date as string | null,
           endDate: e.end_date as string | null,
-          maxAmount: employmentPncContribution(e.salary),
+          maxAmount,
           monthsPaid: employmentPayments.length,
-          cap: null as number | null,
+          cap,
+          totalOwed,
+          remaining: Math.max(0, totalOwed - paidAmount),
         }
       })
       .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -408,7 +436,10 @@ export function PaymentTable({ payments, students, internships, employmentRecord
                     <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position}</p>
                     <p className="text-xs text-muted-foreground">
                       {row.startDate && `${formatDate(row.startDate)} – ${row.endDate ? formatDate(row.endDate) : 'present'} · `}
-                      {row.cap != null ? `${row.monthsPaid}/${row.cap} paid` : `${row.monthsPaid} paid`} · up to {formatCurrency(row.maxAmount)}/mo
+                      {row.monthsPaid}/{row.cap} paid · up to {formatCurrency(row.maxAmount)}/mo
+                    </p>
+                    <p className="text-xs font-medium">
+                      {formatCurrency(row.remaining)} of {formatCurrency(row.totalOwed)} left to pay
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:shrink-0">

@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAdminOrEducation } from '@/lib/auth/server'
-import { internshipAllowanceMonthCap, schoolAllowanceShare, formatCurrency } from '@/lib/utils'
+import { allowanceMonthCap, schoolAllowanceShare, employmentPncContribution, formatCurrency } from '@/lib/utils'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -35,7 +35,7 @@ async function validateInternshipAllowance(
     .single()
   if (!internship) return { error: 'Internship not found.' }
 
-  const cap = internshipAllowanceMonthCap(internship.start_date, internship.end_date)
+  const cap = allowanceMonthCap(internship.start_date, internship.end_date)
   let countQuery = supabase
     .from('allowance_payments')
     .select('id', { count: 'exact', head: true })
@@ -55,6 +55,41 @@ async function validateInternshipAllowance(
   return { ok: true as const }
 }
 
+// full-time job payments follow the same 4-month cap (or fewer if the job placement is
+// shorter), with the max monthly amount coming from the salary-based PNC contribution instead.
+async function validateEmploymentAllowance(
+  supabase: ReturnType<typeof createAdminClient>,
+  employmentId: string,
+  amount: number,
+  excludePaymentId?: string
+) {
+  const { data: employment } = await supabase
+    .from('employment_records')
+    .select('salary, start_date, end_date')
+    .eq('id', employmentId)
+    .single()
+  if (!employment) return { error: 'Employment record not found.' }
+
+  const cap = allowanceMonthCap(employment.start_date, employment.end_date)
+  let countQuery = supabase
+    .from('allowance_payments')
+    .select('id', { count: 'exact', head: true })
+    .eq('employment_id', employmentId)
+  if (excludePaymentId) countQuery = countQuery.neq('id', excludePaymentId)
+  const { count } = await countQuery
+
+  if ((count ?? 0) >= cap) {
+    return { error: `This full-time job has already reached its ${cap}-month allowance payment limit.` }
+  }
+
+  const maxAmount = employmentPncContribution(employment.salary)
+  if (amount > maxAmount) {
+    return { error: `Amount can't exceed ${formatCurrency(maxAmount)} for this salary.` }
+  }
+
+  return { ok: true as const }
+}
+
 export async function createPayment(data: PaymentFormData) {
   const auth = await requireAdminOrEducation()
   if ('error' in auth) return { success: false, error: auth.error }
@@ -65,6 +100,10 @@ export async function createPayment(data: PaymentFormData) {
 
   if (parsed.data.internship_id) {
     const check = await validateInternshipAllowance(supabase, parsed.data.internship_id, parsed.data.amount)
+    if ('error' in check) return { success: false, error: check.error }
+  }
+  if (parsed.data.employment_id) {
+    const check = await validateEmploymentAllowance(supabase, parsed.data.employment_id, parsed.data.amount)
     if ('error' in check) return { success: false, error: check.error }
   }
 
@@ -90,6 +129,10 @@ export async function updatePayment(id: string, data: PaymentFormData) {
 
   if (parsed.data.internship_id) {
     const check = await validateInternshipAllowance(supabase, parsed.data.internship_id, parsed.data.amount, id)
+    if ('error' in check) return { success: false, error: check.error }
+  }
+  if (parsed.data.employment_id) {
+    const check = await validateEmploymentAllowance(supabase, parsed.data.employment_id, parsed.data.amount, id)
     if ('error' in check) return { success: false, error: check.error }
   }
 

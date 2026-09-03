@@ -82,10 +82,11 @@ export const ALREADY_PLACED_STATUSES = new Set(['Internship Accepted', 'Internsh
 
 // students keep this much of their monthly internship allowance; the rest goes to the school
 export const STUDENT_ALLOWANCE_KEEP = 110
-// students pay the school for at most this many months, even on a longer internship
+// students pay the school for at most this many months, whether on an internship or a
+// full-time job — fewer if the internship/employment placement itself is shorter
 export const MAX_ALLOWANCE_MONTHS = 4
 
-export function internshipAllowanceMonthCap(start: string | null | undefined, end: string | null | undefined) {
+export function allowanceMonthCap(start: string | null | undefined, end: string | null | undefined) {
   if (!start || !end) return MAX_ALLOWANCE_MONTHS
   const s = parseISO(start)
   const e = parseISO(end)

@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentProfile, getEducationStaffClassIds } from '@/lib/auth/server'
 import { redirect } from 'next/navigation'
 import { PaymentsClient } from '@/components/payments/payments-client'
-import { internshipAllowanceMonthCap, schoolAllowanceShare } from '@/lib/utils'
+import { allowanceMonthCap, schoolAllowanceShare } from '@/lib/utils'
 
 export const revalidate = 0
 
@@ -57,7 +57,7 @@ export default async function PaymentsPage() {
 
     const internship = (internships ?? []).find(i => i.student_id === studentId && i.allowance != null) ?? null
     const internshipInfo = internship ? (() => {
-      const cap = internshipAllowanceMonthCap(internship.start_date, internship.end_date)
+      const cap = allowanceMonthCap(internship.start_date, internship.end_date)
       const schoolShare = schoolAllowanceShare(internship.allowance)
       const monthsPaid = (payments ?? []).filter(p => p.internship_id === internship.id).length
       return { allowance: internship.allowance, schoolShare, cap, monthsPaid, remaining: Math.max(0, cap - monthsPaid) }
