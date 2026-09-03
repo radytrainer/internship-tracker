@@ -9,11 +9,12 @@ import { CompanyPerformance } from '@/components/dashboard/company-performance'
 import { AllowanceSalaryChart } from '@/components/dashboard/allowance-salary-chart'
 import { GenderPositionChart } from '@/components/dashboard/gender-position-chart'
 import { GenderSalaryChart } from '@/components/dashboard/gender-salary-chart'
-import { EducationReportSection } from '@/components/dashboard/education-report-section'
+import { EducationDashboardClient } from '@/components/dashboard/education-dashboard-client'
+import { MetricCard, StatBox, EmptyState, one } from '@/components/dashboard/shared'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency, formatDate, STUDENT_STATUS_COLORS, APPLICATION_STATUS_COLORS, LEAVE_STATUS_COLORS } from '@/lib/utils'
-import { AlertTriangle, ArrowUpRight, Briefcase, Building2, CalendarDays, Clock, FileText, MessageSquare, UserRound, CalendarOff, Wallet, CheckCircle2 } from 'lucide-react'
+import { formatCurrency, formatDate, STUDENT_STATUS_COLORS, APPLICATION_STATUS_COLORS } from '@/lib/utils'
+import { AlertTriangle, ArrowUpRight, Briefcase, Building2, CalendarDays, Clock, FileText, MessageSquare, UserRound, CheckCircle2 } from 'lucide-react'
 
 export const revalidate = 60
 
@@ -25,7 +26,7 @@ export default async function DashboardPage() {
     const educatorClassIds = profile ? await getEducationStaffClassIds(profile.id) : []
     const classIdSet = new Set(educatorClassIds)
 
-    const [{ data: leavesRaw }, { data: paymentsRaw }] = await Promise.all([
+    const [{ data: leavesRaw }, { data: paymentsRaw }, { data: classesRaw }] = await Promise.all([
       supabase
         .from('student_leaves')
         .select('id, status, start_date, end_date, created_at, student:students(first_name, last_name, student_code, gender, class_id, class:classes(name))')
@@ -34,114 +35,20 @@ export default async function DashboardPage() {
         .from('allowance_payments')
         .select('id, amount, payment_date, student:students(first_name, last_name, student_code, gender, class_id, class:classes(name))')
         .order('payment_date', { ascending: false }),
+      educatorClassIds.length > 0
+        ? supabase.from('classes').select('id, name').in('id', educatorClassIds).order('name')
+        : Promise.resolve({ data: [] as { id: string; name: string }[] }),
     ])
 
-    const student = (ref: unknown) => studentGroupInfo(ref as StudentRef)
+    const classIdOf = (ref: unknown) => one(ref as { class_id: string | null } | { class_id: string | null }[] | null)?.class_id ?? null
     const inScope = (ref: unknown) => {
-      const classId = student(ref).classId
+      const classId = classIdOf(ref)
       return !!classId && classIdSet.has(classId)
     }
     const leaves = (leavesRaw ?? []).filter(l => inScope(l.student))
     const payments = (paymentsRaw ?? []).filter(p => inScope(p.student))
 
-    const pendingLeaves = leaves.filter(l => l.status === 'Pending').length
-    const approvedLeaves = leaves.filter(l => l.status === 'Approved').length
-    const rejectedLeaves = leaves.filter(l => l.status === 'Rejected').length
-
-    const now = new Date()
-    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-    const paymentsThisMonth = payments.filter(p => p.payment_date?.startsWith(thisMonthKey))
-    const totalThisMonth = paymentsThisMonth.reduce((sum, p) => sum + Number(p.amount), 0)
-    const totalAllTime = payments.reduce((sum, p) => sum + Number(p.amount), 0)
-
-    const allowanceByMonth = sumByGroup(
-      payments,
-      p => (p.payment_date as string)?.slice(0, 7) ?? 'Unknown',
-      p => Number(p.amount)
-    ).sort((a, b) => a.key.localeCompare(b.key))
-
-    const allowanceByGender = sumByGroup(payments, p => student(p.student).gender, p => Number(p.amount))
-
-    const allowanceByClass = sumByGroup(payments, p => student(p.student).className, p => Number(p.amount))
-      .sort((a, b) => b.total - a.total)
-
-    const leaveByGender = groupLeavesBy(leaves, l => student(l.student).gender)
-    const leaveByClass = groupLeavesBy(leaves, l => student(l.student).className)
-      .sort((a, b) => b.total - a.total)
-
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatBox label="Pending Leave Requests" value={pendingLeaves} color="text-yellow-600" bg="bg-yellow-50 dark:bg-yellow-950/30" icon={CalendarOff} />
-          <StatBox label="Approved Leaves" value={approvedLeaves} color="text-green-600" bg="bg-green-50 dark:bg-green-950/30" icon={CheckCircle2} />
-          <StatBox label="Rejected Leaves" value={rejectedLeaves} color="text-red-600" bg="bg-red-50 dark:bg-red-950/30" icon={AlertTriangle} />
-          <StatBox label="Total Leave Requests" value={leaves.length} color="text-slate-600" bg="bg-slate-50 dark:bg-slate-900/30" icon={FileText} />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <MetricCard label="Allowance Paid This Month" value={formatCurrency(totalThisMonth)} hint={`${paymentsThisMonth.length} payment${paymentsThisMonth.length !== 1 ? 's' : ''} confirmed`} icon={Wallet} color="text-teal-600" bg="bg-teal-50 dark:bg-teal-950/30" />
-          <MetricCard label="Allowance Paid All-Time" value={formatCurrency(totalAllTime)} hint={`${payments.length} payment${payments.length !== 1 ? 's' : ''} total`} icon={Wallet} color="text-indigo-600" bg="bg-indigo-50 dark:bg-indigo-950/30" />
-        </div>
-
-        <EducationReportSection
-          payments={payments}
-          allowanceByMonth={allowanceByMonth}
-          allowanceByGender={allowanceByGender}
-          allowanceByClass={allowanceByClass}
-          leaveByGender={leaveByGender}
-          leaveByClass={leaveByClass}
-          summary={{ pendingLeaves, approvedLeaves, rejectedLeaves, totalLeaves: leaves.length, totalAllTime, totalThisMonth }}
-        />
-
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Leave Requests</CardTitle>
-              <CardDescription>Latest {Math.min(leaves.length, 5)} of {leaves.length}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {leaves.length === 0 ? (
-                <EmptyState text="No leave requests yet." />
-              ) : (
-                leaves.slice(0, 5).map(l => (
-                  <div key={l.id} className="flex items-center justify-between rounded-lg border p-3 gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{one(l.student)?.first_name} {one(l.student)?.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(l.start_date)} → {formatDate(l.end_date)}</p>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${LEAVE_STATUS_COLORS[l.status] ?? ''}`}>
-                      {l.status}
-                    </span>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Allowance Payments</CardTitle>
-              <CardDescription>Latest {Math.min(payments.length, 5)} of {payments.length}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {payments.length === 0 ? (
-                <EmptyState text="No payments confirmed yet." />
-              ) : (
-                payments.slice(0, 5).map(p => (
-                  <div key={p.id} className="flex items-center justify-between rounded-lg border p-3 gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{one(p.student)?.first_name} {one(p.student)?.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(p.payment_date)}</p>
-                    </div>
-                    <p className="font-semibold shrink-0">{formatCurrency(p.amount)}</p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
+    return <EducationDashboardClient leaves={leaves} payments={payments} classes={classesRaw ?? []} />
   }
 
   if (role === 'student') {
@@ -776,109 +683,6 @@ export default async function DashboardPage() {
       </div>
     </div>
   )
-}
-
-function MetricCard({
-  label,
-  value,
-  hint,
-  icon: Icon,
-  color = 'text-foreground',
-  bg = 'bg-card',
-}: {
-  label: string
-  value: number | string
-  hint: string
-  icon: typeof UserRound
-  color?: string
-  bg?: string
-}) {
-  return (
-    <Card className={`border-none ${bg}`}>
-      <CardContent className="flex items-center justify-between p-5">
-        <div>
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className={`mt-1 text-2xl font-semibold ${color}`}>{value}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-        </div>
-        <div className="rounded-2xl bg-white/60 dark:bg-white/10 p-3">
-          <Icon className={`h-5 w-5 ${color}`} />
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function StatBox({
-  label, value, color, bg, icon: Icon,
-}: {
-  label: string
-  value: number
-  color: string
-  bg: string
-  icon: typeof UserRound
-}) {
-  return (
-    <div className={`rounded-xl border p-4 flex items-center gap-3 ${bg}`}>
-      <div className={`rounded-lg p-2 bg-white/60 dark:bg-white/10 shrink-0`}>
-        <Icon className={`h-5 w-5 ${color}`} />
-      </div>
-      <div className="min-w-0">
-        <p className={`text-2xl font-bold ${color}`}>{value}</p>
-        <p className="text-xs text-muted-foreground leading-tight">{label}</p>
-      </div>
-    </div>
-  )
-}
-
-function EmptyState({ text }: { text: string }) {
-  return <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{text}</p>
-}
-
-function one<T>(value: T | T[] | null | undefined): T | null {
-  if (Array.isArray(value)) return value[0] ?? null
-  return value ?? null
-}
-
-type StudentRef =
-  | { gender: string | null; class_id: string | null; class: { name: string }[] | { name: string } | null }
-  | { gender: string | null; class_id: string | null; class: { name: string }[] | { name: string } | null }[]
-  | null
-
-function studentGroupInfo(ref: StudentRef) {
-  const s = one(ref)
-  return {
-    gender: s?.gender ?? 'Unknown',
-    classId: s?.class_id ?? null,
-    className: one(s?.class ?? null)?.name ?? 'No class',
-  }
-}
-
-function sumByGroup<T>(rows: T[], getKey: (row: T) => string, getValue: (row: T) => number) {
-  const map = new Map<string, { total: number; count: number }>()
-  for (const row of rows) {
-    const key = getKey(row)
-    const value = getValue(row)
-    const entry = map.get(key) ?? { total: 0, count: 0 }
-    entry.total += value
-    entry.count += 1
-    map.set(key, entry)
-  }
-  return Array.from(map.entries()).map(([key, v]) => ({ key, ...v }))
-}
-
-function groupLeavesBy<T extends { status: string }>(rows: T[], getKey: (row: T) => string) {
-  const map = new Map<string, { total: number; pending: number; approved: number; rejected: number }>()
-  for (const row of rows) {
-    const key = getKey(row)
-    const entry = map.get(key) ?? { total: 0, pending: 0, approved: 0, rejected: 0 }
-    entry.total += 1
-    if (row.status === 'Pending') entry.pending += 1
-    else if (row.status === 'Approved') entry.approved += 1
-    else if (row.status === 'Rejected') entry.rejected += 1
-    map.set(key, entry)
-  }
-  return Array.from(map.entries()).map(([key, v]) => ({ key, ...v }))
 }
 
 function summarizeByKey<T>(rows: T[], getLabel: (row: T) => string) {
