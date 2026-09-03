@@ -12,8 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet, CheckCircle2 } from 'lucide-react'
-import { createPayment, updatePayment, deletePayment, type PaymentFormData } from '@/app/actions/payments'
+import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet, CheckCircle2, RotateCcw } from 'lucide-react'
+import { createPayment, updatePayment, deletePayment, updateAllowanceTotalOverride, type PaymentFormData } from '@/app/actions/payments'
 import { formatDate, formatCurrency, allowanceMonthCap, schoolAllowanceShare, STUDENT_ALLOWANCE_KEEP, employmentPncPercent, employmentPncContribution } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -64,10 +64,12 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
     ? payments.filter(p => p.internship_id === selectedInternship.id && p.id !== payment?.id)
     : []
   const monthsUsed = internshipOtherPayments.length
-  const capReached = allowanceCap != null && monthsUsed >= allowanceCap
   const internshipPaidAmount = internshipOtherPayments.reduce((s, p) => s + Number(p.amount), 0)
-  const internshipTotalOwed = allowanceCap != null && schoolAmount != null ? schoolAmount * allowanceCap : null
+  const internshipTotalOwed = selectedInternship
+    ? (selectedInternship.allowance_total_override ?? (allowanceCap != null && schoolAmount != null ? schoolAmount * allowanceCap : null))
+    : null
   const internshipRemaining = internshipTotalOwed != null ? Math.max(0, internshipTotalOwed - internshipPaidAmount) : null
+  const capReached = (allowanceCap != null && monthsUsed >= allowanceCap) || internshipRemaining === 0
 
   const selectedEmployment = employmentRecords.find(e => e.id === form.employment_id) ?? null
   const employmentPercent = selectedEmployment ? employmentPncPercent(selectedEmployment.salary) : null
@@ -77,12 +79,18 @@ function PaymentFormDialog({ open, onClose, payment, students, internships, empl
     ? payments.filter(p => p.employment_id === selectedEmployment.id && p.id !== payment?.id)
     : []
   const employmentMonthsUsed = employmentOtherPayments.length
-  const employmentCapReached = employmentCap != null && employmentMonthsUsed >= employmentCap
   const employmentPaidAmount = employmentOtherPayments.reduce((s, p) => s + Number(p.amount), 0)
-  const employmentTotalOwed = employmentCap != null && employmentAmount != null ? employmentAmount * employmentCap : null
+  const employmentTotalOwed = selectedEmployment
+    ? (selectedEmployment.allowance_total_override ?? (employmentCap != null && employmentAmount != null ? employmentAmount * employmentCap : null))
+    : null
   const employmentRemaining = employmentTotalOwed != null ? Math.max(0, employmentTotalOwed - employmentPaidAmount) : null
+  const employmentCapReached = (employmentCap != null && employmentMonthsUsed >= employmentCap) || employmentRemaining === 0
 
-  const maxAmount = selectedInternship ? schoolAmount : selectedEmployment ? employmentAmount : null
+  const maxAmount = selectedInternship
+    ? (internshipRemaining != null && schoolAmount != null ? Math.min(schoolAmount, internshipRemaining) : schoolAmount)
+    : selectedEmployment
+      ? (employmentRemaining != null && employmentAmount != null ? Math.min(employmentAmount, employmentRemaining) : employmentAmount)
+      : null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -261,7 +269,9 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         if (!student) return null
         const maxAmount = schoolAllowanceShare(i.allowance)
         const paidAmount = internshipPayments.reduce((s, p) => s + Number(p.amount), 0)
-        const totalOwed = maxAmount * cap
+        const totalOwed = i.allowance_total_override ?? maxAmount * cap
+        const remaining = Math.max(0, totalOwed - paidAmount)
+        if (remaining <= 0) return null
         return {
           key: `internship-${i.id}`,
           type: 'internship' as const,
@@ -275,10 +285,12 @@ export function PaymentTable({ payments, students, internships, employmentRecord
           startDate: i.start_date as string | null,
           endDate: i.end_date as string | null,
           maxAmount,
+          payableMax: Math.min(maxAmount, remaining),
           monthsPaid: internshipPayments.length,
           cap,
           totalOwed,
-          remaining: Math.max(0, totalOwed - paidAmount),
+          hasOverride: i.allowance_total_override != null,
+          remaining,
         }
       })
       .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -294,7 +306,9 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         if (!student) return null
         const maxAmount = employmentPncContribution(e.salary)
         const paidAmount = employmentPayments.reduce((s, p) => s + Number(p.amount), 0)
-        const totalOwed = maxAmount * cap
+        const totalOwed = e.allowance_total_override ?? maxAmount * cap
+        const remaining = Math.max(0, totalOwed - paidAmount)
+        if (remaining <= 0) return null
         return {
           key: `employment-${e.id}`,
           type: 'employment' as const,
@@ -308,10 +322,12 @@ export function PaymentTable({ payments, students, internships, employmentRecord
           startDate: e.start_date as string | null,
           endDate: e.end_date as string | null,
           maxAmount,
+          payableMax: Math.min(maxAmount, remaining),
           monthsPaid: employmentPayments.length,
           cap,
           totalOwed,
-          remaining: Math.max(0, totalOwed - paidAmount),
+          hasOverride: e.allowance_total_override != null,
+          remaining,
         }
       })
       .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -320,8 +336,8 @@ export function PaymentTable({ payments, students, internships, employmentRecord
   }, [internships, employmentRecords, payments, students, dueMonth])
 
   const handleQuickConfirm = async (row: (typeof dueList)[number]) => {
-    const amount = rowAmounts[row.key] ?? row.maxAmount
-    if (amount <= 0 || amount > row.maxAmount) return
+    const amount = rowAmounts[row.key] ?? row.payableMax
+    if (amount <= 0 || amount > row.payableMax) return
     setConfirmingId(row.key)
     const result = await createPayment({
       student_id: row.studentId,
@@ -340,6 +356,30 @@ export function PaymentTable({ payments, students, internships, employmentRecord
       setRowDates(d => { const next = { ...d }; delete next[row.key]; return next })
       router.refresh()
     }
+  }
+
+  const [totalDrafts, setTotalDrafts] = useState<Record<string, string>>({})
+  const [savingTotal, setSavingTotal] = useState<string | null>(null)
+
+  const saveTotalOverride = async (row: (typeof dueList)[number], value: number | null) => {
+    setSavingTotal(row.key)
+    const result = await updateAllowanceTotalOverride(row.type, row.type === 'internship' ? row.internshipId! : row.employmentId!, value)
+    setSavingTotal(null)
+    if (result.error) toast.error(result.error)
+    else {
+      toast.success('Total updated')
+      setTotalDrafts(d => { const next = { ...d }; delete next[row.key]; return next })
+      router.refresh()
+    }
+  }
+
+  const handleTotalBlur = (row: (typeof dueList)[number]) => {
+    const draftStr = totalDrafts[row.key]
+    if (draftStr === undefined) return
+    const draft = Number(draftStr)
+    if (!Number.isFinite(draft) || draft < 0) { toast.error('Enter a valid total amount'); return }
+    if (draft === row.totalOwed) { setTotalDrafts(d => { const next = { ...d }; delete next[row.key]; return next }); return }
+    saveTotalOverride(row, draft)
   }
 
   const filtered = useMemo(() => payments.filter(p => {
@@ -417,9 +457,10 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         ) : (
           <div className="space-y-2">
             {dueList.map(row => {
-              const amount = rowAmounts[row.key] ?? row.maxAmount
+              const amount = rowAmounts[row.key] ?? row.payableMax
               const date = rowDates[row.key] ?? format(new Date(), 'yyyy-MM-dd')
-              const invalid = amount <= 0 || amount > row.maxAmount
+              const invalid = amount <= 0 || amount > row.payableMax
+              const totalDraft = totalDrafts[row.key] ?? String(row.totalOwed)
               return (
                 <div key={row.key} className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:flex-wrap sm:items-center">
                   <div className="min-w-0 flex-1">
@@ -438,13 +479,33 @@ export function PaymentTable({ payments, students, internships, employmentRecord
                       {row.startDate && `${formatDate(row.startDate)} – ${row.endDate ? formatDate(row.endDate) : 'present'} · `}
                       {row.monthsPaid}/{row.cap} paid · up to {formatCurrency(row.maxAmount)}/mo
                     </p>
-                    <p className="text-xs font-medium">
-                      {formatCurrency(row.remaining)} of {formatCurrency(row.totalOwed)} left to pay
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1 text-xs font-medium mt-0.5">
+                      <span>{formatCurrency(row.remaining)} of</span>
+                      <Input
+                        type="number" min={0} step="0.01"
+                        className="h-6 w-20 px-1.5 text-xs"
+                        value={totalDraft}
+                        disabled={savingTotal === row.key}
+                        onChange={e => setTotalDrafts(d => ({ ...d, [row.key]: e.target.value }))}
+                        onBlur={() => handleTotalBlur(row)}
+                      />
+                      <span>left to pay</span>
+                      {row.hasOverride && (
+                        <button
+                          type="button"
+                          title="Reset to the standard amount × months total"
+                          className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          disabled={savingTotal === row.key}
+                          onClick={() => saveTotalOverride(row, null)}
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:shrink-0">
                     <Input
-                      type="number" min={0} max={row.maxAmount} step="0.01" className="h-8 w-full sm:w-24"
+                      type="number" min={0} max={row.payableMax} step="0.01" className="h-8 w-full sm:w-24"
                       value={amount}
                       onChange={e => setRowAmounts(a => ({ ...a, [row.key]: Number(e.target.value) }))}
                     />

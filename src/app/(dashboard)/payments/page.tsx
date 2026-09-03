@@ -30,11 +30,11 @@ export default async function PaymentsPage() {
       .order('first_name'),
     admin
       .from('internships')
-      .select('id, student_id, position, allowance, start_date, end_date, company:companies(company_name)')
+      .select('id, student_id, position, allowance, start_date, end_date, allowance_total_override, company:companies(company_name)')
       .order('created_at', { ascending: false }),
     admin
       .from('employment_records')
-      .select('id, student_id, position, company_name, salary, start_date, end_date')
+      .select('id, student_id, position, company_name, salary, start_date, end_date, allowance_total_override')
       .order('created_at', { ascending: false }),
     admin
       .from('interviews')
