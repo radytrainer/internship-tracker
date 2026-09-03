@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Search, Pencil, Trash2, MoreHorizontal, Wallet, CheckCircle2, RotateCcw, Check, X } from 'lucide-react'
 import { createPayment, updatePayment, deletePayment, updateAllowanceTotalOverride, type PaymentFormData } from '@/app/actions/payments'
@@ -521,264 +522,283 @@ export function PaymentTable({ payments, students, internships, employmentRecord
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="font-semibold text-sm">Due for {monthLabel(dueMonth)}</h3>
-            <p className="text-xs text-muted-foreground">Internship and full-time job students not yet paid this month — adjust the amount if they got a partial allowance, then confirm</p>
+      <Tabs defaultValue="due">
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="due" className="gap-1.5">Due for Payment <span className="text-xs opacity-70">({dueList.length})</span></TabsTrigger>
+          <TabsTrigger value="progress" className="gap-1.5">Student Progress <span className="text-xs opacity-70">({allProgress.length})</span></TabsTrigger>
+          <TabsTrigger value="history" className="gap-1.5">Payment History <span className="text-xs opacity-70">({payments.length})</span></TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="due" className="space-y-4">
+        <div className="rounded-lg border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-sm">Due for {monthLabel(dueMonth)}</h3>
+              <p className="text-xs text-muted-foreground">Internship and full-time job students not yet paid this month — adjust the amount if they got a partial allowance, then confirm</p>
+            </div>
+            <Badge variant="secondary">{dueList.length}</Badge>
           </div>
-          <Badge variant="secondary">{dueList.length}</Badge>
-        </div>
-        {dueList.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4 flex items-center justify-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />Everyone is paid up for this month
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {dueList.map(row => {
-              const amount = rowAmounts[row.key] ?? row.payableMax
-              const date = rowDates[row.key] ?? format(new Date(), 'yyyy-MM-dd')
-              const invalid = amount <= 0 || amount > row.payableMax
-              const isEditingTotal = editingTotal === row.key
-              const isSavingTotal = savingTotal === row.key
-              const progressPct = Math.min(100, Math.round((row.monthsPaid / row.cap) * 100))
-              return (
-                <div key={row.key} className="rounded-lg border p-3 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                        style={{ background: avatarColor(row.studentName) }}
-                      >
-                        {getInitials(row.studentName)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{row.studentName} <span className="text-xs text-muted-foreground font-mono font-normal">({row.studentCode})</span></p>
-                        <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position}</p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={`shrink-0 px-1.5 py-0 h-4 text-[10px] ${row.type === 'internship' ? 'text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:bg-blue-950/30' : 'text-violet-700 border-violet-200 bg-violet-50 dark:text-violet-400 dark:border-violet-900 dark:bg-violet-950/30'}`}
-                    >
-                      {row.type === 'internship' ? 'Internship' : 'Full-Time Job'}
-                    </Badge>
-                  </div>
-
-                  <div className="rounded-md bg-muted/50 p-2.5 space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>{row.startDate && `${formatDate(row.startDate)} – ${row.endDate ? formatDate(row.endDate) : 'present'} · `}{formatCurrency(row.maxAmount)}/mo</span>
-                      <span>{row.monthsPaid}/{row.cap} paid</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div className={`h-full ${row.type === 'internship' ? 'bg-blue-500' : 'bg-violet-500'}`} style={{ width: `${progressPct}%` }} />
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs pt-0.5">
-                      <span className="text-muted-foreground">{formatCurrency(row.remaining)} remaining</span>
-                      {isEditingTotal ? (
-                        <span className="flex items-center gap-1">
-                          <span className="text-muted-foreground">Total</span>
-                          <Input
-                            type="number" min={0} step="0.01" autoFocus
-                            className="h-6 w-20 px-1.5 text-xs"
-                            value={totalDrafts[row.key] ?? ''}
-                            disabled={isSavingTotal}
-                            onChange={e => setTotalDrafts(d => ({ ...d, [row.key]: e.target.value }))}
-                            onKeyDown={e => { if (e.key === 'Enter') confirmEditTotal(row); if (e.key === 'Escape') cancelEditTotal(row.key) }}
-                          />
-                          <button type="button" title="Save" disabled={isSavingTotal} className="text-green-600 hover:text-green-700 disabled:opacity-50" onClick={() => confirmEditTotal(row)}>
-                            <Check className="h-3.5 w-3.5" />
-                          </button>
-                          <button type="button" title="Cancel" disabled={isSavingTotal} className="text-muted-foreground hover:text-foreground disabled:opacity-50" onClick={() => cancelEditTotal(row.key)}>
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1">
-                          <span className="text-muted-foreground">Total {formatCurrency(row.totalOwed)}</span>
-                          <button type="button" title="Edit total owed" className="text-muted-foreground hover:text-foreground" onClick={() => startEditTotal(row)}>
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                          {row.hasOverride && (
-                            <button type="button" title="Reset to the standard amount × months total" className="text-muted-foreground hover:text-foreground" onClick={() => saveTotalOverride(row, null)}>
-                              <RotateCcw className="h-3 w-3" />
-                            </button>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">
-                    <div className="grid grid-cols-2 gap-2 flex-1">
-                      <Input
-                        type="number" min={0} max={row.payableMax} step="0.01" className="h-8 w-full"
-                        value={amount}
-                        onChange={e => setRowAmounts(a => ({ ...a, [row.key]: Number(e.target.value) }))}
-                      />
-                      <Input
-                        type="date" className="h-8 w-full"
-                        value={date}
-                        onChange={e => setRowDates(d => ({ ...d, [row.key]: e.target.value }))}
-                      />
-                    </div>
-                    <Button size="sm" className="w-full sm:w-auto" onClick={() => handleQuickConfirm(row)} disabled={confirmingId === row.key || invalid}>
-                      {confirmingId === row.key ? 'Confirming…' : 'Confirm'}
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="relative w-full sm:max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by student name or code..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-      </div>
-
-      <div className="rounded-lg border bg-card p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <h3 className="font-semibold text-sm">Student Payment Progress</h3>
-            <p className="text-xs text-muted-foreground">Every internship/full-time job student tracked for allowance — my class or all classes, per the toggle above</p>
-          </div>
-          <Badge variant="secondary">{progressFiltered.length}</Badge>
-        </div>
-        {progressFiltered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No students found</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead className="min-w-[160px]">Progress</TableHead>
-                  <TableHead className="text-right">Remaining</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {progressFiltered.map(row => {
-                  const pct = Math.min(100, Math.round((row.monthsPaid / row.cap) * 100))
-                  const fullyPaid = row.remaining <= 0
-                  const notStarted = row.monthsPaid === 0
-                  return (
-                    <TableRow key={row.key}>
-                      <TableCell>
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className="h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                            style={{ background: avatarColor(row.studentName) }}
-                          >
-                            {getInitials(row.studentName)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">{row.studentName}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{row.studentCode}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        <span className={`text-[10px] uppercase tracking-wide font-semibold mr-1 ${row.type === 'internship' ? 'text-blue-600' : 'text-violet-600'}`}>
-                          {row.type === 'internship' ? 'Internship' : 'Job'}
-                        </span>
-                        {row.companyName} — {row.position}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 min-w-[60px] rounded-full bg-muted overflow-hidden">
-                            <div className={`h-full ${row.type === 'internship' ? 'bg-blue-500' : 'bg-violet-500'}`} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-xs text-muted-foreground shrink-0">{row.monthsPaid}/{row.cap}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right text-sm whitespace-nowrap">
-                        <span className="font-semibold">{formatCurrency(row.remaining)}</span>
-                        <span className="text-muted-foreground"> / {formatCurrency(row.totalOwed)}</span>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {fullyPaid ? (
-                          <Badge className="gap-1 whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border-transparent">
-                            <CheckCircle2 className="h-3 w-3" />Fully Paid
-                          </Badge>
-                        ) : notStarted ? (
-                          <Badge variant="outline" className="whitespace-nowrap text-amber-700 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-900 dark:bg-amber-950/30">
-                            Not Started
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="whitespace-nowrap text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:bg-blue-950/30">
-                            In Progress
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-lg border bg-card overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead className="w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">No payments found</TableCell></TableRow>
-            ) : (
-              filtered.map(p => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.student?.first_name} {p.student?.last_name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {p.internship ? (
-                      <span><span className="text-[10px] uppercase tracking-wide text-blue-600 font-semibold mr-1">Internship</span>{p.internship.company?.company_name ?? ''} — {p.internship.position}</span>
-                    ) : p.employment ? (
-                      <span><span className="text-[10px] uppercase tracking-wide text-violet-600 font-semibold mr-1">Job</span>{p.employment.company_name ?? ''} — {p.employment.position}</span>
-                    ) : '—'}
-                  </TableCell>
-                  <TableCell className="font-semibold">{formatCurrency(p.amount)}</TableCell>
-                  <TableCell className="text-sm">{formatDate(p.payment_date)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{p.payment_time ?? '—'}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditTarget(p); setFormOpen(true) }}>
-                          <Pencil className="mr-2 h-4 w-4" />Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                          onClick={() => setDeleteTarget(p)}
+          {dueList.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4 flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />Everyone is paid up for this month
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {dueList.map(row => {
+                const amount = rowAmounts[row.key] ?? row.payableMax
+                const date = rowDates[row.key] ?? format(new Date(), 'yyyy-MM-dd')
+                const invalid = amount <= 0 || amount > row.payableMax
+                const isEditingTotal = editingTotal === row.key
+                const isSavingTotal = savingTotal === row.key
+                const progressPct = Math.min(100, Math.round((row.monthsPaid / row.cap) * 100))
+                return (
+                  <div key={row.key} className="rounded-lg border p-3 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          className="h-8 w-8 shrink-0 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ background: avatarColor(row.studentName) }}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                          {getInitials(row.studentName)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">{row.studentName} <span className="text-xs text-muted-foreground font-mono font-normal">({row.studentCode})</span></p>
+                          <p className="text-xs text-muted-foreground truncate">{row.companyName} — {row.position}</p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`shrink-0 px-1.5 py-0 h-4 text-[10px] ${row.type === 'internship' ? 'text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:bg-blue-950/30' : 'text-violet-700 border-violet-200 bg-violet-50 dark:text-violet-400 dark:border-violet-900 dark:bg-violet-950/30'}`}
+                      >
+                        {row.type === 'internship' ? 'Internship' : 'Full-Time Job'}
+                      </Badge>
+                    </div>
+  
+                    <div className="rounded-md bg-muted/50 p-2.5 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>{row.startDate && `${formatDate(row.startDate)} – ${row.endDate ? formatDate(row.endDate) : 'present'} · `}{formatCurrency(row.maxAmount)}/mo</span>
+                        <span>{row.monthsPaid}/{row.cap} paid</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className={`h-full ${row.type === 'internship' ? 'bg-blue-500' : 'bg-violet-500'}`} style={{ width: `${progressPct}%` }} />
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs pt-0.5">
+                        <span className="text-muted-foreground">{formatCurrency(row.remaining)} remaining</span>
+                        {isEditingTotal ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-muted-foreground">Total</span>
+                            <Input
+                              type="number" min={0} step="0.01" autoFocus
+                              className="h-6 w-20 px-1.5 text-xs"
+                              value={totalDrafts[row.key] ?? ''}
+                              disabled={isSavingTotal}
+                              onChange={e => setTotalDrafts(d => ({ ...d, [row.key]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') confirmEditTotal(row); if (e.key === 'Escape') cancelEditTotal(row.key) }}
+                            />
+                            <button type="button" title="Save" disabled={isSavingTotal} className="text-green-600 hover:text-green-700 disabled:opacity-50" onClick={() => confirmEditTotal(row)}>
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" title="Cancel" disabled={isSavingTotal} className="text-muted-foreground hover:text-foreground disabled:opacity-50" onClick={() => cancelEditTotal(row.key)}>
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1">
+                            <span className="text-muted-foreground">Total {formatCurrency(row.totalOwed)}</span>
+                            <button type="button" title="Edit total owed" className="text-muted-foreground hover:text-foreground" onClick={() => startEditTotal(row)}>
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            {row.hasOverride && (
+                              <button type="button" title="Reset to the standard amount × months total" className="text-muted-foreground hover:text-foreground" onClick={() => saveTotalOverride(row, null)}>
+                                <RotateCcw className="h-3 w-3" />
+                              </button>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+  
+                    <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center">
+                      <div className="grid grid-cols-2 gap-2 flex-1">
+                        <Input
+                          type="number" min={0} max={row.payableMax} step="0.01" className="h-8 w-full"
+                          value={amount}
+                          onChange={e => setRowAmounts(a => ({ ...a, [row.key]: Number(e.target.value) }))}
+                        />
+                        <Input
+                          type="date" className="h-8 w-full"
+                          value={date}
+                          onChange={e => setRowDates(d => ({ ...d, [row.key]: e.target.value }))}
+                        />
+                      </div>
+                      <Button size="sm" className="w-full sm:w-auto" onClick={() => handleQuickConfirm(row)} disabled={confirmingId === row.key || invalid}>
+                        {confirmingId === row.key ? 'Confirming…' : 'Confirm'}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        </TabsContent>
+
+        <TabsContent value="progress" className="space-y-4">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by student name or code..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+  
+        <div className="rounded-lg border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-sm">Student Payment Progress</h3>
+              <p className="text-xs text-muted-foreground">Every internship/full-time job student tracked for allowance — my class or all classes, per the toggle above</p>
+            </div>
+            <Badge variant="secondary">{progressFiltered.length}</Badge>
+          </div>
+          {progressFiltered.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No students found</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead className="min-w-[160px]">Progress</TableHead>
+                    <TableHead className="text-right">Remaining</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {progressFiltered.map(row => {
+                    const pct = Math.min(100, Math.round((row.monthsPaid / row.cap) * 100))
+                    const fullyPaid = row.remaining <= 0
+                    const notStarted = row.monthsPaid === 0
+                    return (
+                      <TableRow key={row.key}>
+                        <TableCell>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className="h-7 w-7 shrink-0 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
+                              style={{ background: avatarColor(row.studentName) }}
+                            >
+                              {getInitials(row.studentName)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{row.studentName}</p>
+                              <p className="text-xs text-muted-foreground font-mono">{row.studentCode}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          <span className={`text-[10px] uppercase tracking-wide font-semibold mr-1 ${row.type === 'internship' ? 'text-blue-600' : 'text-violet-600'}`}>
+                            {row.type === 'internship' ? 'Internship' : 'Job'}
+                          </span>
+                          {row.companyName} — {row.position}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 flex-1 min-w-[60px] rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full ${row.type === 'internship' ? 'bg-blue-500' : 'bg-violet-500'}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs text-muted-foreground shrink-0">{row.monthsPaid}/{row.cap}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-sm whitespace-nowrap">
+                          <span className="font-semibold">{formatCurrency(row.remaining)}</span>
+                          <span className="text-muted-foreground"> / {formatCurrency(row.totalOwed)}</span>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {fullyPaid ? (
+                            <Badge className="gap-1 whitespace-nowrap bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border-transparent">
+                              <CheckCircle2 className="h-3 w-3" />Fully Paid
+                            </Badge>
+                          ) : notStarted ? (
+                            <Badge variant="outline" className="whitespace-nowrap text-amber-700 border-amber-200 bg-amber-50 dark:text-amber-400 dark:border-amber-900 dark:bg-amber-950/30">
+                              Not Started
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="whitespace-nowrap text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-400 dark:border-blue-900 dark:bg-blue-950/30">
+                              In Progress
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-4">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by student name or code..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+  
+        <div className="rounded-lg border bg-card overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead className="w-10"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">No payments found</TableCell></TableRow>
+              ) : (
+                filtered.map(p => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.student?.first_name} {p.student?.last_name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {p.internship ? (
+                        <span><span className="text-[10px] uppercase tracking-wide text-blue-600 font-semibold mr-1">Internship</span>{p.internship.company?.company_name ?? ''} — {p.internship.position}</span>
+                      ) : p.employment ? (
+                        <span><span className="text-[10px] uppercase tracking-wide text-violet-600 font-semibold mr-1">Job</span>{p.employment.company_name ?? ''} — {p.employment.position}</span>
+                      ) : '—'}
+                    </TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(p.amount)}</TableCell>
+                    <TableCell className="text-sm">{formatDate(p.payment_date)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{p.payment_time ?? '—'}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setEditTarget(p); setFormOpen(true) }}>
+                            <Pencil className="mr-2 h-4 w-4" />Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={() => setDeleteTarget(p)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        </TabsContent>
+      </Tabs>
 
       <PaymentFormDialog
         open={formOpen}
