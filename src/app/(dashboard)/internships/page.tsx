@@ -32,7 +32,7 @@ export default async function InternshipsPage() {
 
   let studentsQuery = admin
     .from('students')
-    .select('id, first_name, last_name, student_code, class_id, notes')
+    .select('id, first_name, last_name, student_code, class_id, notes, gender')
     .order('first_name')
 
   if (studentFilter) {

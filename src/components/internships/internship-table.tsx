@@ -28,7 +28,7 @@ type AnyRecord = any
 
 interface InternshipTableProps {
   internships: Internship[]
-  students: { id: string; first_name: string; last_name: string; student_code: string; class_id?: string | null; notes?: string | null }[]
+  students: { id: string; first_name: string; last_name: string; student_code: string; class_id?: string | null; notes?: string | null; gender?: string | null }[]
   companies: { id: string; company_name: string; has_mou?: boolean }[]
   classes: { id: string; name: string }[]
   role: AppRole
@@ -41,6 +41,7 @@ export function InternshipTable({ internships, students, companies, classes, rol
   const [filterCompany, setFilterCompany] = useState('all')
   const [filterClass, setFilterClass] = useState('all')
   const [filterSource, setFilterSource] = useState('all')
+  const [filterMonth, setFilterMonth] = useState('all')
   const [formOpen, setFormOpen] = useState(false)
   const [editInternship, setEditInternship] = useState<Internship | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AnyRecord | null>(null)
@@ -63,8 +64,31 @@ export function InternshipTable({ internships, students, companies, classes, rol
     const matchCompany = filterCompany === 'all' || iv.company_id === filterCompany
     const matchClass = filterClass === 'all' || student?.class_id === filterClass
     const matchSource = filterSource === 'all' || (filterSource === 'unset' ? !iv.source : iv.source === filterSource)
-    return matchSearch && matchStatus && matchCompany && matchClass && matchSource
-  }), [internships, students, companies, classes, search, filterStatus, filterCompany, filterClass, filterSource])
+    const matchMonth = filterMonth === 'all' || iv.start_date?.slice(0, 7) === filterMonth
+    return matchSearch && matchStatus && matchCompany && matchClass && matchSource && matchMonth
+  }), [internships, students, companies, classes, search, filterStatus, filterCompany, filterClass, filterSource, filterMonth])
+
+  // Months (YYYY-MM) in which students started an internship, newest first
+  const monthOptions = useMemo(() => {
+    const months = new Set<string>()
+    for (const iv of internships) if (iv.start_date) months.add(iv.start_date.slice(0, 7))
+    return [...months].sort().reverse().map(m => {
+      const [y, mo] = m.split('-').map(Number)
+      return { value: m, label: new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) }
+    })
+  }, [internships])
+
+  // Unique students in the filtered records, split by gender
+  const genderStats = useMemo(() => {
+    const ids = new Set(filtered.map((iv: AnyRecord) => iv.student_id))
+    let male = 0, female = 0
+    for (const id of ids) {
+      const g = students.find(s => s.id === id)?.gender
+      if (g === 'Male') male++
+      else if (g === 'Female') female++
+    }
+    return { total: ids.size, male, female }
+  }, [filtered, students])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -124,7 +148,33 @@ export function InternshipTable({ internships, students, companies, classes, rol
             <SelectItem value="unset">Not Set</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={filterMonth} onValueChange={setFilterMonth}>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="All Start Months" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Start Months</SelectItem>
+            {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
+
+      {role !== 'student' && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">
+              Students got a job{filterMonth !== 'all' ? ` in ${monthOptions.find(m => m.value === filterMonth)?.label}` : ''}
+            </p>
+            <p className="text-2xl font-bold">{genderStats.total}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Male</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{genderStats.male}</p>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Female</p>
+            <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{genderStats.female}</p>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-lg border bg-card overflow-x-auto">
         <Table>
